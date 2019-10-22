@@ -11,6 +11,8 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   sensor_msgs
   std_msgs
+  geometry_msgs
+  laser_geometry
 )
 find_package(Eigen3 REQUIRED)
 
@@ -106,7 +108,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES icp_cpp
-  CATKIN_DEPENDS eigen roscpp sensor_msgs std_msgs
+  CATKIN_DEPENDS eigen roscpp sensor_msgs std_msgs geometry_msgs
 #  DEPENDS system_lib
 )
 
@@ -126,6 +128,9 @@ include_directories(include)
    src/icp.cpp
  )
 
+add_library(scanmatcher_node
+src/scanmatcher_node.cpp
+)
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -155,7 +160,8 @@ add_executable (icp_node src/icp_node.cpp)
 
 
 target_link_libraries (icp ${catkin_LIBRARIES})
-target_link_libraries(icp_node ${CATKIN_LIBRARIES} icp)
+target_link_libraries (scanmatcher_node ${catkin_LIBRARIES} icp)
+target_link_libraries(icp_node ${CATKIN_LIBRARIES} icp scanmatcher_node)
 
 #############
 ## Install ##
