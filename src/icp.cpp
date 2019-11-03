@@ -2,7 +2,12 @@
 #include <vector>
 #include <iostream>
 #include "icp_cpp/icp.h"
+#include "nanoflann/nanoflann.hpp"
 #include <numeric>
+#include <cstdlib>
+
+
+
 
 ICP::ICP(int m_it)
 
@@ -66,8 +71,6 @@ Eigen::MatrixXd ICP::best_fit_transform(const Eigen::MatrixXd &pointcloud_A, con
   }
 
   trans_vector = cent_B - rot_matrix * cent_A;
-
-
   hg_T.block<3,3>(0,0) = rot_matrix;
   hg_T.block<3,1>(0,3) = trans_vector;
 
@@ -79,44 +82,34 @@ float ICP::euc_dist(const Eigen::Vector3d &pt_a, const Eigen::Vector3d &pt_b)
   return sqrt(pow(pt_a[0]-pt_b[0], 2) + pow(pt_a[1]-pt_b[1], 2) + pow(pt_a[2]-pt_b[2], 2) );
 }
 
-void ICP::calc_closest_neighbors(const Eigen::MatrixXd &src, const Eigen::MatrixXd &dst)
+
+void ICP::calc_closest_neighbors_kdtree(const Eigen::MatrixXd &src, const nn_kd_tree &dst_tree)
 {
-  int num_rows_src = src.rows(), num_rows_dst = dst.rows();
+  const size_t num_results = 1;
+  Eigen::Vector3d src_pt;
 
-  Eigen::Vector3d src_point;
-  Eigen::Vector3d dst_point;
-
-
-
-
-  for(int i = 0; i < num_rows_src; i++)
+  for (int i = 0; i < src.rows(); i++)
   {
-    src_point = src.block<1,3>(i,0).transpose();
-    double min_distance = 1000.0;
-    int index = 0;
-    double temp_distance = 0.0;
+    std::vector<size_t> temp_index(1);
+    std::vector<double> temp_dist(1);
 
 
-    for(int j = 0; j < num_rows_dst; j++)
-    {
-      dst_point = dst.block<1,3>(i,0).transpose();
+    src_pt = src.block<1,3>(i,0).transpose();
+    nanoflann::KNNResultSet<double> results(num_results);
+    results.init(&temp_index[0], &temp_dist[0]);
 
-      temp_distance = euc_dist(src_point, dst_point);
-      if (temp_distance < min_distance)
-        {
-          min_distance = temp_distance;
-          index = j;
-        }
+    std::vector<double> query_pt{src_pt(0), src_pt(1), src_pt(2)};
+    dst_tree.index->findNeighbors(results, &query_pt[0], nanoflann::SearchParams(10));
 
-    }
-
-    dists.push_back(min_distance);
-    indices.push_back(index);
+    indices.push_back(int(temp_index[0]));
+    dists.push_back(temp_dist[0]);
   }
+
 }
 
 
-void ICP::run_scan_matcher(const Eigen::MatrixXd &pointcloud_A, const Eigen::MatrixXd &pointcloud_B, int tolerance)
+
+void ICP::run_scan_matcher(const Eigen::MatrixXd &pointcloud_A, const Eigen::MatrixXd &pointcloud_B, double tolerance)
 {
 
   int num_rows = pointcloud_A.rows();
@@ -125,6 +118,11 @@ void ICP::run_scan_matcher(const Eigen::MatrixXd &pointcloud_A, const Eigen::Mat
   src_3d = Eigen::MatrixXd::Ones(3, num_rows);
   Eigen::MatrixXd hg_dst = Eigen::MatrixXd::Ones(3+1, num_rows);
 
+  const size_t dim = 3;
+
+
+  nn_kd_tree dst_index(dim, std::cref(pointcloud_B), 10);
+  dst_index.index->buildIndex();
   Eigen::MatrixXd closest_pts_in_dst = Eigen::MatrixXd::Ones(3,num_rows);
 
 
@@ -140,9 +138,11 @@ void ICP::run_scan_matcher(const Eigen::MatrixXd &pointcloud_A, const Eigen::Mat
   double prev_error = 0.0;
   double mean_error = 0.0;
 
-  for (iters = 0; iters < max_iters; iters++)
+  for (iters = 1; iters <= max_iters; iters++)
   {
-    calc_closest_neighbors(src_3d.transpose(), pointcloud_B);
+    indices.clear();
+    dists.clear();
+    calc_closest_neighbors_kdtree(src_3d.transpose(), dst_index);
 
     for (int j = 0; j < num_rows; j++)
       closest_pts_in_dst.block<3,1>(0,j) = hg_dst.block<3,1>(0,indices[j]);
@@ -155,7 +155,6 @@ void ICP::run_scan_matcher(const Eigen::MatrixXd &pointcloud_A, const Eigen::Mat
     for (int j = 0; j < num_rows; j++)
       src_3d.block<3,1>(0,j) = hg_src.block<3,1>(0,j);
 
-
     mean_error = std::accumulate(dists.begin(), dists.end(), 0.0) / dists.size();
 
     if (abs(prev_error - mean_error) < tolerance)
@@ -166,6 +165,6 @@ void ICP::run_scan_matcher(const Eigen::MatrixXd &pointcloud_A, const Eigen::Mat
     iters++;
 
   }
-  std::cout<<"\n \n Calculating final transform..."<<std::endl;
+  std::cout<<"Final Mean Error: "<<mean_error<<std::endl;
   transform_matr = best_fit_transform(pointcloud_A, src_3d.transpose());
 }
