@@ -13,6 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
   std_msgs
   geometry_msgs
   laser_geometry
+  tf
 )
 find_package(Eigen3 REQUIRED)
 
@@ -108,7 +109,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES icp_cpp
-  CATKIN_DEPENDS eigen roscpp sensor_msgs std_msgs geometry_msgs
+  CATKIN_DEPENDS eigen roscpp sensor_msgs std_msgs geometry_msgs tf
 #  DEPENDS system_lib
 )
 

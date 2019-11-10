@@ -7,8 +7,6 @@
 #include <cstdlib>
 
 
-
-
 ICP::ICP(int m_it)
 
 {
@@ -18,30 +16,35 @@ ICP::ICP(int m_it)
 
 }
 
+
 Eigen::MatrixXd ICP::best_fit_transform(const Eigen::MatrixXd &pointcloud_A, const Eigen::MatrixXd &pointcloud_B)
 {
-  Eigen::MatrixXd hg_T = Eigen::MatrixXd::Identity(4,4),shifted_A = pointcloud_A, shifted_B = pointcloud_B;
-  Eigen::Vector3d cent_A(0,0,0), cent_B(0,0,0);
+  Eigen::MatrixXd hg_T = Eigen::MatrixXd::Identity(4,4);
 
-  int num_rows = pointcloud_A.rows();
+  Eigen::MatrixXd shifted_A = pointcloud_A;
+  Eigen::MatrixXd shifted_B = pointcloud_B;
+  Eigen::Vector3d cent_A(0.,0.,0.), cent_B(0.,0.,0.);
 
-  for (int i = 0; i < num_rows; i++)
-  {
+
+  int a_rows = pointcloud_A.rows(), b_rows=pointcloud_B.rows();
+
+  for (int i = 0; i < a_rows; i++)
     cent_A += pointcloud_A.block<1,3>(i,0).transpose();
+
+  for (int i = 0; i < b_rows; i++)
     cent_B += pointcloud_B.block<1,3>(i,0).transpose();
-  }
 
-  cent_A/=num_rows;
-  cent_B/=num_rows;
+  cent_A/=a_rows;
+  cent_B/=b_rows;
 
-  for(int i = 0; i < num_rows; i++)
-  {
+  for(int i = 0; i < a_rows; i++)
     shifted_A.block<1,3>(i,0) = pointcloud_A.block<1,3>(i,0) - cent_A.transpose();
+
+
+  for (int i = 0; i < b_rows; i++)
     shifted_B.block<1,3>(i,0) = pointcloud_B.block<1,3>(i,0) - cent_B.transpose();
-  }
 
   Eigen::MatrixXd H = shifted_A.transpose()*shifted_B;
-
 
   Eigen::MatrixXd U;
   Eigen::VectorXd S;
@@ -57,19 +60,15 @@ Eigen::MatrixXd ICP::best_fit_transform(const Eigen::MatrixXd &pointcloud_A, con
   V = SVD.matrixV();
   Vt = V.transpose();
 
+  rot_matrix = V*U.transpose();
 
-  rot_matrix = Vt.transpose()*U.transpose();
+  std::cout<<"Rotation: \n \n"<<rot_matrix<<std::endl;
 
   if (rot_matrix.determinant() < 0)
   {
-
     Vt.block<1,3>(2,0) *=-1;
-
-    rot_matrix = Vt.transpose()*U.transpose();
-
-
+    rot_matrix = Vt*U.transpose();
   }
-
   trans_vector = cent_B - rot_matrix * cent_A;
   hg_T.block<3,3>(0,0) = rot_matrix;
   hg_T.block<3,1>(0,3) = trans_vector;
@@ -81,7 +80,6 @@ float ICP::euc_dist(const Eigen::Vector3d &pt_a, const Eigen::Vector3d &pt_b)
 {
   return sqrt(pow(pt_a[0]-pt_b[0], 2) + pow(pt_a[1]-pt_b[1], 2) + pow(pt_a[2]-pt_b[2], 2) );
 }
-
 
 void ICP::calc_closest_neighbors_kdtree(const Eigen::MatrixXd &src, const nn_kd_tree &dst_tree)
 {
@@ -111,53 +109,64 @@ void ICP::calc_closest_neighbors_kdtree(const Eigen::MatrixXd &src, const nn_kd_
 
 void ICP::run_scan_matcher(const Eigen::MatrixXd &pointcloud_A, const Eigen::MatrixXd &pointcloud_B, double tolerance)
 {
-
-  int num_rows = pointcloud_A.rows();
-
-  Eigen::MatrixXd hg_src = Eigen::MatrixXd::Ones(3+1, num_rows);
-  src_3d = Eigen::MatrixXd::Ones(3, num_rows);
-  Eigen::MatrixXd hg_dst = Eigen::MatrixXd::Ones(3+1, num_rows);
+  int a_rows = pointcloud_A.rows();
+  int b_rows = pointcloud_B.rows();
+  Eigen::MatrixXd hg_src = Eigen::MatrixXd::Ones(3+1, a_rows);
+  src_3d = Eigen::MatrixXd::Ones(3, a_rows);
+  Eigen::MatrixXd hg_dst = Eigen::MatrixXd::Ones(3+1, b_rows);
+  Eigen::MatrixXd closest_pts_in_dst = Eigen::MatrixXd::Ones(3,a_rows);
 
   const size_t dim = 3;
 
-
+  std::cout<<"Building KD Tree"<<std::endl;
   nn_kd_tree dst_index(dim, std::cref(pointcloud_B), 10);
   dst_index.index->buildIndex();
-  Eigen::MatrixXd closest_pts_in_dst = Eigen::MatrixXd::Ones(3,num_rows);
 
 
-  for (int i = 0; i < num_rows; i++)
+
+
+  for (int i = 0; i < a_rows; i++)
   {
     hg_src.block<3,1>(0,i) = pointcloud_A.block<1,3>(i,0).transpose();
     src_3d.block<3,1>(0,i) = pointcloud_A.block<1,3>(i,0).transpose();
-    hg_dst.block<3,1>(0,i) = pointcloud_B.block<1,3>(i,0).transpose();
   }
 
-
+  for (int j = 0; j < b_rows; j++)
+  {
+    hg_dst.block<3,1>(0,j) = pointcloud_B.block<1,3>(j,0).transpose();
+  }
 
   double prev_error = 0.0;
   double mean_error = 0.0;
-
+  double diff;
   for (iters = 1; iters <= max_iters; iters++)
   {
     indices.clear();
     dists.clear();
+
     calc_closest_neighbors_kdtree(src_3d.transpose(), dst_index);
 
-    for (int j = 0; j < num_rows; j++)
-      closest_pts_in_dst.block<3,1>(0,j) = hg_dst.block<3,1>(0,indices[j]);
+    for (int j = 0; j < a_rows; j++)
+    {
+        closest_pts_in_dst.block<3,1>(0,j) = hg_dst.block<3,1>(0,indices[j]);
+    }
+
 
     transform_matr = best_fit_transform(src_3d.transpose(), closest_pts_in_dst.transpose());
 
 
     hg_src = transform_matr*hg_src;
 
-    for (int j = 0; j < num_rows; j++)
+    for (int j = 0; j < a_rows; j++)
       src_3d.block<3,1>(0,j) = hg_src.block<3,1>(0,j);
 
     mean_error = std::accumulate(dists.begin(), dists.end(), 0.0) / dists.size();
+    diff = mean_error-prev_error;
 
-    if (abs(prev_error - mean_error) < tolerance)
+
+    diff = (diff < 0 ) ? diff*-1 : diff;
+
+    if (diff < tolerance)
       break;
 
     prev_error = mean_error;
@@ -165,6 +174,9 @@ void ICP::run_scan_matcher(const Eigen::MatrixXd &pointcloud_A, const Eigen::Mat
     iters++;
 
   }
+  std::cout<<"Final Prev Error:"<<prev_error<<std::endl;
   std::cout<<"Final Mean Error: "<<mean_error<<std::endl;
+  std::cout<<"Final Diff: "<<diff<<std::endl<<std::endl;
+
   transform_matr = best_fit_transform(pointcloud_A, src_3d.transpose());
 }

@@ -11,6 +11,7 @@
 #include "geometry_msgs/Point32.h"
 #include "geometry_msgs/Pose.h"
 #include "ros/ros.h"
+#include <tf/transform_listener.h>
 
 class ScanMatcherNode
 {
@@ -24,8 +25,6 @@ private:
   int ts_sec;
   int ts_nsec;
   std::string frame_id;
-
-
 
 public:
   ScanMatcherNode(ros::NodeHandle &n);
