@@ -6,13 +6,12 @@
 
 
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   ros::init(argc, argv, "scan_matcher");
   ros::NodeHandle n;
   ScanMatcherNode node(n);
 
-  ros::Subscriber sub = n.subscribe("/scan", 1000, &ScanMatcherNode::process_scan_match, &node);
+  ros::Subscriber sub = n.subscribe("/scan", 1000, &ScanMatcherNode::ProcessScanMatch, &node);
   ros::spin();
 
   return 0;

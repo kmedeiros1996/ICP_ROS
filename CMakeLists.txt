@@ -119,11 +119,12 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
+
 include_directories(
-# include
+  include
   ${catkin_INCLUDE_DIRS}
-)
-include_directories(include)
+  )
+
 ## Declare a C++ library
  add_library(icp
    src/icp.cpp
@@ -164,7 +165,7 @@ target_link_libraries (icp ${catkin_LIBRARIES})
 target_link_libraries (scanmatcher_node ${catkin_LIBRARIES} icp)
 target_link_libraries(icp_node ${CATKIN_LIBRARIES} icp scanmatcher_node)
 
-#############
+#############+
 ## Install ##
 #############
 
