@@ -1,18 +1,15 @@
-#include "icp_cpp/icp.h"
-#include "icp_cpp/scanmatcher_node.h"
-#include <eigen3/Eigen/Dense>
-#include "ros/ros.h"
-#include "sensor_msgs/LaserScan.h"
 
+// ICP
+#include "icp_cpp/scanmatcher_driver.h"
+#include "icp_cpp/program_options.h"
 
+/*
+* Program main. Instantiate the scan match driver and parse args.
+*/
 
 int main(int argc, char **argv) {
   ros::init(argc, argv, "scan_matcher");
-  ros::NodeHandle n;
-  ScanMatcherNode node(n);
-
-  ros::Subscriber sub = n.subscribe("/scan", 1000, &ScanMatcherNode::ProcessScanMatch, &node);
-  ros::spin();
-
+  ProgramOptions opts = ParseArgs(argc, argv);
+  ScanMatchDriver node(opts);
   return 0;
 }

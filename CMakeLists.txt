@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(icp_cpp)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
- add_compile_options(-std=c++11)
+ add_compile_options(-std=c++14)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -15,7 +15,8 @@ find_package(catkin REQUIRED COMPONENTS
   laser_geometry
   tf
 )
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
+find_package(cxxopts CONFIG REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -109,7 +110,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
   INCLUDE_DIRS include
   LIBRARIES icp_cpp
-  CATKIN_DEPENDS eigen roscpp sensor_msgs std_msgs geometry_msgs tf
+  CATKIN_DEPENDS Eigen3::Eigen roscpp sensor_msgs std_msgs
 #  DEPENDS system_lib
 )
 
@@ -127,11 +128,13 @@ include_directories(
 
 ## Declare a C++ library
  add_library(icp
+   src/icp_utils.cpp
    src/icp.cpp
  )
 
-add_library(scanmatcher_node
-src/scanmatcher_node.cpp
+add_library(scanmatcher_driver
+src/conversion.cpp
+src/scanmatcher_driver.cpp
 )
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
@@ -162,8 +165,8 @@ add_executable (icp_node src/icp_node.cpp)
 
 
 target_link_libraries (icp ${catkin_LIBRARIES})
-target_link_libraries (scanmatcher_node ${catkin_LIBRARIES} icp)
-target_link_libraries(icp_node ${CATKIN_LIBRARIES} icp scanmatcher_node)
+target_link_libraries (scanmatcher_driver ${catkin_LIBRARIES} icp cxxopts::cxxopts)
+target_link_libraries(icp_node ${CATKIN_LIBRARIES} scanmatcher_driver cxxopts::cxxopts)
 
 #############+
 ## Install ##
