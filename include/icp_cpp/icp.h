@@ -25,9 +25,9 @@ class ICP {
 public:
 
   /*
-  * @brief constructor which takes max number of iterations
+  * @brief constructor which takes max number of iterations and error convergence tolerance
   */
-  ICP(int max_iterations);
+  ICP(int max_iterations, float tolerance=kLeastSquaresErrorTolerance);
 
   /*
   * @brief Match an input scan A against the already built KD-Tree from Scan B.
@@ -37,11 +37,34 @@ public:
   */
   void MatchScanAToScanB(const Eigen::MatrixXd &scan_a, double tolerance = kLeastSquaresErrorTolerance);
 
+
   /*
-  * @brief Set Scan B and build a KD-Tree for Scan A to match against
+  * @brief Set Scan A, populate the scan A homogeneous coordinates matrix, and transform via the initial guess.
+  * @param scan_a (n_points * dim) matrix encoding pointcloud A xyz data
+  */
+  void SetScanA(const Eigen::MatrixXd &scan_a);
+
+  /*
+  * @brief Set Scan B, populate the scan B homogeneous coordinates matrix,
+  * and build a KD-Tree for Scan A to lookup nearest neighbors to.
   * @param scan_b (n_points * dim) matrix encoding pointcloud B xyz data
   */
   void SetScanB(const Eigen::MatrixXd &scan_b);
+
+  /*
+  * @brief runs one iteration of ICP by calculating the closest neighbors in B to each point in A,
+  * computing the best fit transform between the closest points in B and the current transformed scan A,
+  * transforming A via the computed transformation matrix, and computing the mean error from all the point distances.
+  *
+  * @return average of all point distances
+  */
+  double RunOneIteration();
+
+  /*
+  * @brief Set initial guess of the transform between A and B.
+  * @param initial_guess 4D matrix to set initial guess to.
+  */
+  void SetInitialGuess(const Eigen::Matrix4d &initial_guess) { initial_guess_ = initial_guess; }
 
   /*-----------------Getters to extract final ICP results*--------------------/
   /*
@@ -50,6 +73,10 @@ public:
   Eigen::Matrix4d GetTransform() {return transform_matr_;}
 
   /*
+  * @brief computes and returns transform_matr_ as the transform between the initial scan A and the current aligned scan A
+  */
+  Eigen::Matrix4d ComputeFinalTransform();
+  /*
   * @brief get 4d transformation matrix encoding rotation / translation
   */
   std::vector<double> GetPrevDistances(){return dists_;}
@@ -57,12 +84,27 @@ public:
   /*
   * @brief get the number of iterations it took for ICP to converge
   */
-  int GetPrevIterations(){return iters_;}
+  int GetPrevIterations() const {return iters_;}
+
+  /*
+  * @brief get the max number of allowed iterations
+  */
+  int GetMaxIterations() const {return max_iters_; }
 
   /*
   * @brief get (n_points * dim) matrix containing aligned pointcloud xyz data
   */
   Eigen::MatrixXd GetAlignedScan(){return curr_aligned_scan_a_;}
+
+  /*
+  * @return convergence tolerance for ICP
+  */
+  float GetTolerance() const { return tolerance_; }
+
+  /*
+  * @brief set tolerance for ICP convergence
+  */
+  void SetTolerance(const float tol) {tolerance_ = tol; }
 
 private:
 
@@ -74,10 +116,15 @@ private:
 
   int max_iters_{0};                                  // Max allowed iterations
   int iters_{0};                                      // current iterations
+  float tolerance_{kLeastSquaresErrorTolerance};      // ICP convergence tolerance
   std::unique_ptr<NearestNeighborKDTree> pc_b_index_; // Nearest-Neighbor KD-Tree from Scan B (n_points * dim)
   Eigen::Matrix4d transform_matr_;                    // Homogeneous transformation matrix between input scan A and post-alignment scan A
+  Eigen::Matrix4d initial_guess_;                     // 4D matrix of initial guess for the transform between A and B
   std::vector<int> indices_;                          // vector of indices to closest points
   std::vector<double> dists_;                         // vector of distances to closest points
+  int num_pts_a_;                                     // Number of points in Scan A
+  int num_pts_b_;                                     // Number of points in Scan B
+  Eigen::MatrixXd input_scan_a_;                      // Input scan A
   Eigen::MatrixXd curr_aligned_scan_a_;               // Input scan A with current transformation applied (n_points * dim)
   Eigen::MatrixXd scan_a_hg_;                         // Input scan A in homogeneous coordinates (n_points * dim+1)
   Eigen::MatrixXd scan_b_hg_;                         // Input scan B in homogeneous coordinates (n_points * dim+1)

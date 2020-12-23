@@ -14,6 +14,7 @@
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <std_msgs/Float64MultiArray.h>
 #include <ros/ros.h>
 
 // Third Party
@@ -79,6 +80,13 @@ private:
   void PC2Callback(const sensor_msgs::PointCloud2ConstPtr& input_cloud, const std::string &topic);
 
   /*
+  * @brief Initial Guess matrix callback.
+  * Sets ICP initial guess to the matrix received on the initial_guess_topic.
+  * @param initial_guess 4D transformation matrix encoding initial transform for Scan A
+  */
+  void InitialGuessCallback(const std_msgs::Float64MultiArray& initial_guess);
+
+  /*
   * @brief Process an input scan received on the scan_a input topic.
   * Used only in sequential mode.
   * - If first scan, sets Scan B to pc_matrix
@@ -109,6 +117,18 @@ private:
   void ProcessScanB(const Eigen::MatrixXd& pc_matrix);
 
   /*
+  * @brief Runs ICP in regular mode. After ICP converges, will publish the transform / transformed Scan A
+  */
+  void RunICPRegularMode();
+
+  /*
+  * @brief Runs ICP in stepwise mode.
+  * Publishes the current transformed scan on every iteration of ICP and waits for stepwise_time_interval_ seconds.
+  * After ICP converges, will publish the transform.
+  */
+  void RunICPStepwiseMode();
+
+  /*
   * @brief method to create a pointer to a subscriber on the heap
   * @param topic topic for subsciber to listen to. Bound to a lambda callback which is passed to the output subscriber.
   * @param msg_type input ROS message format  (LaserScan, PointCloud, PointCloud2)
@@ -127,12 +147,16 @@ private:
   ros::NodeHandle node_handle_;                                     // ROS node handle
   std::string input_a_topic_;                                       // Topic to receive Scan A on (used in sequential and A-to-B mode)
   std::string input_b_topic_;                                       // Topic to receive Scan B on (A-to-B mode only)
+  bool show_each_step_;                                             // Flag to run ICP in show_each_step mode
+  std::unique_ptr<ros::Duration> stepwise_time_interval_;           // Pointer to ros::Duration time interval to wait in between iterations (in stepwise scan mode)
   std::unique_ptr<ros::Publisher> transform_publisher_{nullptr};    // Pointer to transformation matrix publisher
   std::unique_ptr<ros::Publisher> scan_a_publisher_{nullptr};       // Pointer to scan a publisher
+  std::unique_ptr<ros::Publisher> step_scan_a_publisher_{nullptr};  // Pointer to stepwise scan a publisher
   std::unique_ptr<ros::Publisher> trans_scan_a_publisher_{nullptr}; // Pointer to post-transform scan a publisher
   std::unique_ptr<ros::Publisher> scan_b_publisher_{nullptr};       // Pointer to scan b publisher
   std::unique_ptr<ros::Subscriber> scan_a_subscriber_{nullptr};     // Pointer to scan a subscriber
   std::unique_ptr<ros::Subscriber> scan_b_subscriber_{nullptr};     // Pointer to scan b subscriber
+  std::unique_ptr<ros::Subscriber> guess_subscriber_{nullptr};     // Pointer to initial guess subscriber
 };
 
 #endif //ICP_DRIVER_H

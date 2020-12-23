@@ -8,19 +8,24 @@
 #include <cxxopts.hpp>
 
 constexpr int kMaxNumDefaultIterations = 100;
+
 struct ProgramOptions {
   std::string mode{"sequential"};
   std::string input_scan_a_topic{"scan"};
+  std::string initial_guess_topic{"transform_matrix"};
   std::string input_scan_b_topic{"scan_b"};
   std::string input_scan_a_type{"laserscan"};
   std::string input_scan_b_type{"laserscan"};
   std::string output_transform_matrix_topic{"transform_matrix"};
   int max_num_iterations = kMaxNumDefaultIterations;
   std::string frame_id{"laser"};
+  float stepwise_time_interval{0.01};
+  bool show_each_step{false};
   bool pub_scan_a{false};
   bool pub_trans_scan_a{false};
   bool pub_scan_b{false};
   std::string output_scan_a_topic{"scan_a_out"};
+  std::string output_stepwise_a_topic{"scan_a_stepwise"};
   std::string output_trans_scan_a_topic{"scan_a_transformed_out"};
   std::string output_scan_b_topic{"scan_b_out"};
 };
@@ -33,6 +38,8 @@ ProgramOptions ParseArgs(int argc, char** argv) {
     cxxopts::value<std::string>(program_options.mode)->default_value("sequential"))
     ("a,in_a", "input topic to receive scan A on",
     cxxopts::value<std::string>(program_options.input_scan_a_topic)->default_value("scan"))
+    ("g,init_guess", "input topic to receive initial guess on",
+    cxxopts::value<std::string>(program_options.initial_guess_topic)->default_value("transform_matrix"))
     ("b,in_b", "input topic to receive scan B on",
     cxxopts::value<std::string>(program_options.input_scan_b_topic)->default_value("scan_b"))
     ("a_type", "message type of scan A, ['laserscan' 'pointcloud' or 'pointcloud2']",
@@ -45,6 +52,10 @@ ProgramOptions ParseArgs(int argc, char** argv) {
     cxxopts::value<int>(program_options.max_num_iterations)->default_value(std::to_string(kMaxNumDefaultIterations)))
     ("f,frame_id", "tf frame id",
     cxxopts::value<std::string>(program_options.frame_id)->default_value("laser"))
+    ("t,time_interval", "time interval for the show_each_step debug mode (will run one iteration and sleep for this amount)",
+    cxxopts::value<float>(program_options.stepwise_time_interval)->default_value("0.01"))
+    ("s,show_each_step", "Run in a debug mode where at every iteration of ICP, the current transformed scan is published.",
+    cxxopts::value<bool>(program_options.show_each_step))
     ("pub_scan_a", "enable publishing of scan A",
     cxxopts::value<bool>(program_options.pub_scan_a))
     ("pub_trans_scan_a", "enable publishing of transformed scan A",
@@ -53,6 +64,8 @@ ProgramOptions ParseArgs(int argc, char** argv) {
     cxxopts::value<bool>(program_options.pub_scan_b))
     ("out_a_topic", "Output topic to publish scan A",
     cxxopts::value<std::string>(program_options.output_scan_a_topic)->default_value("scan_a_out"))
+    ("stepwise_a_topic", "Output topic to publish scan A (during stepwise publishing mode)",
+    cxxopts::value<std::string>(program_options.output_stepwise_a_topic)->default_value("scan_a_stepwise"))
     ("out_trans_a_topic", "Output topic to publish transformed scan A",
     cxxopts::value<std::string>(program_options.output_trans_scan_a_topic)->default_value("scan_a_transformed_out"))
     ("out_b_topic", "Output topic to publish scan B",

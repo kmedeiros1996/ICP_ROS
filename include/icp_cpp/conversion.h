@@ -41,6 +41,12 @@ Eigen::MatrixXd PointCloudToMatrix(const sensor_msgs::PointCloud& input_cloud);
 */
 Eigen::MatrixXd PointCloud2ToMatrix(const sensor_msgs::PointCloud2ConstPtr& input_cloud);
 
+/*
+* @brief turns a Float64MultiArray into an Eigen::MatrixXd of matching dimensions.
+* @param matrix dynamic size matrix of doubles
+*/
+Eigen::MatrixXd MultiArrayToMatrix(const std_msgs::Float64MultiArray& matrix);
+
 /*----------------------Output Conversions------------------------*/
 
 /*

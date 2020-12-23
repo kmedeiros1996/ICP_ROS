@@ -100,3 +100,17 @@ std_msgs::Float64MultiArray MatrixToMultiArray(const Eigen::MatrixXd& matrix) {
   out.data = data;
   return out;
 }
+
+Eigen::MatrixXd MultiArrayToMatrix(const std_msgs::Float64MultiArray& matrix) {
+  int rows = matrix.layout.dim[0].size;
+  int cols = matrix.layout.dim[1].size;
+  Eigen::MatrixXd out(rows, cols);
+
+  for (int i = 0; i < rows; i++) {
+    for (int j = 0; j < cols; j++) {
+      out(i, j) = matrix.data[i*cols + j];
+    }
+  }
+
+  return out;
+}
