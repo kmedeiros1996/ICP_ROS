@@ -5,7 +5,7 @@
 #include <string>
 
 // Third party
-#include <cxxopts.hpp>
+#include <cxxopts/cxxopts.hpp>
 
 constexpr int kMaxNumDefaultIterations = 100;
 
