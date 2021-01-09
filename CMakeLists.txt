@@ -16,7 +16,6 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)
-find_package(cxxopts CONFIG REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -165,8 +164,8 @@ add_executable (icp_node src/icp_node.cpp)
 
 
 target_link_libraries (icp ${catkin_LIBRARIES})
-target_link_libraries (scanmatcher_driver ${catkin_LIBRARIES} icp cxxopts::cxxopts)
-target_link_libraries(icp_node ${CATKIN_LIBRARIES} scanmatcher_driver cxxopts::cxxopts)
+target_link_libraries (scanmatcher_driver ${catkin_LIBRARIES} icp)
+target_link_libraries(icp_node ${CATKIN_LIBRARIES} scanmatcher_driver)
 
 #############+
 ## Install ##
