@@ -10,20 +10,36 @@
 constexpr int kMaxNumDefaultIterations = 100;
 
 struct ProgramOptions {
+  // Mode
   std::string mode{"sequential"};
+  int max_num_iterations = kMaxNumDefaultIterations;
+
+  // Input Scan Topics
   std::string input_scan_a_topic{"scan"};
-  std::string initial_guess_topic{"transform_matrix"};
   std::string input_scan_b_topic{"scan_b"};
+
+  // Input Scan Types
   std::string input_scan_a_type{"laserscan"};
   std::string input_scan_b_type{"laserscan"};
-  std::string output_transform_matrix_topic{"transform_matrix"};
-  int max_num_iterations = kMaxNumDefaultIterations;
+
+  // Initial Guess
+  std::string initial_guess_topic{"odom"};
+  std::string initial_guess_type{"odometry"};
+
+  // Output Transform
+  std::string output_transform_topic{"transform"};
   std::string frame_id{"laser"};
+
+  // Debug Stepwise mode options
   float stepwise_time_interval{0.01};
   bool show_each_step{false};
+
+  // Debug Working Scan Publishers
   bool pub_scan_a{false};
   bool pub_trans_scan_a{false};
   bool pub_scan_b{false};
+
+  // Output topics
   std::string output_scan_a_topic{"scan_a_out"};
   std::string output_stepwise_a_topic{"scan_a_stepwise"};
   std::string output_trans_scan_a_topic{"scan_a_transformed_out"};
@@ -38,16 +54,18 @@ ProgramOptions ParseArgs(int argc, char** argv) {
     cxxopts::value<std::string>(program_options.mode)->default_value("sequential"))
     ("a,in_a", "input topic to receive scan A on",
     cxxopts::value<std::string>(program_options.input_scan_a_topic)->default_value("scan"))
-    ("g,init_guess", "input topic to receive initial guess on",
-    cxxopts::value<std::string>(program_options.initial_guess_topic)->default_value("transform_matrix"))
     ("b,in_b", "input topic to receive scan B on",
     cxxopts::value<std::string>(program_options.input_scan_b_topic)->default_value("scan_b"))
+    ("g,init_guess", "topic to receive initial guess transform on",
+    cxxopts::value<std::string>(program_options.initial_guess_topic)->default_value("odom"))
+    ("in_transform_type", "message type of initial guess ['multiarray', 'odometry']",
+    cxxopts::value<std::string>(program_options.initial_guess_type)->default_value("odometry"))
     ("a_type", "message type of scan A, ['laserscan' 'pointcloud' or 'pointcloud2']",
     cxxopts::value<std::string>(program_options.input_scan_a_type)->default_value("laserscan"))
     ("b_type", "message type of scan B, ['laserscan' 'pointcloud' or 'pointcloud2']",
     cxxopts::value<std::string>(program_options.input_scan_b_type)->default_value("laserscan"))
-    ("transform_topic", "topic to publish transformation matrix on",
-    cxxopts::value<std::string>(program_options.output_transform_matrix_topic)->default_value("transform_matrix"))
+    ("transform_topic", "topic to publish transform on",
+    cxxopts::value<std::string>(program_options.output_transform_topic)->default_value("transform"))
     ("i,max_num_iterations", "max scan matcher iterations before exiting",
     cxxopts::value<int>(program_options.max_num_iterations)->default_value(std::to_string(kMaxNumDefaultIterations)))
     ("f,frame_id", "tf frame id",

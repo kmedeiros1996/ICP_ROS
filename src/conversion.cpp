@@ -6,9 +6,12 @@
 #include <sensor_msgs/LaserScan.h>
 #include <std_msgs/Float64MultiArray.h>
 #include <laser_geometry/laser_geometry.h>
+#include <nav_msgs/Odometry.h>
+#include <geometry_msgs/PoseWithCovariance.h>
 
 // Third Party
 #include <Eigen/Dense>
+#include <Eigen/Geometry>
 
 // ICP
 #include "icp_cpp/conversion.h"
@@ -72,7 +75,7 @@ sensor_msgs::PointCloud2 MatrixToPointCloud2(const Eigen::MatrixXd& pc_matrix, s
   return cloud_msg;
 }
 
-std_msgs::Float64MultiArray MatrixToMultiArray(const Eigen::MatrixXd& matrix) {
+std_msgs::Float64MultiArray MatrixToMultiArray(const Eigen::Matrix4d& matrix) {
   std_msgs::Float64MultiArray out;
 
   int rows = matrix.rows();
@@ -112,5 +115,22 @@ Eigen::MatrixXd MultiArrayToMatrix(const std_msgs::Float64MultiArray& matrix) {
     }
   }
 
+  return out;
+}
+
+Eigen::MatrixXd OdometryToMatrix(const nav_msgs::Odometry& odom) {
+  Eigen::MatrixXd out = Eigen::MatrixXd::Zero(4, 4);
+  double x = odom.pose.pose.position.x;
+  double y = odom.pose.pose.position.y;
+  double z = odom.pose.pose.position.z;
+
+  double qx = odom.pose.pose.orientation.x;
+  double qy = odom.pose.pose.orientation.y;
+  double qz = odom.pose.pose.orientation.z;
+  double qw = odom.pose.pose.orientation.w;
+  Eigen::Quaterniond q (qw, qx, qy, qz);
+
+  out.block<3,1>(0,3) << x, y, z;
+  out.block<3,3>(0,0) = q.toRotationMatrix();
   return out;
 }
