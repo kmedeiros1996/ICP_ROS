@@ -42,27 +42,27 @@ show_each_step_(options.show_each_step) {
 
 void ScanMatchDriver::InitializePublishers(const ProgramOptions& options) {
 
-    transform_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<std_msgs::Float64MultiArray>(options.output_transform_topic, 1000));
-    std::cout<<"Initialized Transformation Matrix publisher on topic "<<options.output_transform_topic<<std::endl;
+    transform_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<std_msgs::Float64MultiArray>(options.output_transform_topic, options.queue_size));
+    std::cout<<"Initialized Transformation Matrix publisher on topic "<<options.output_transform_topic<< " with queue size "<<options.queue_size<<std::endl;
 
     if (options.pub_scan_a) {
-      scan_a_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_scan_a_topic, 1000));
-      std::cout<<"Initialized Scan A publisher on topic "<<options.output_scan_a_topic<<std::endl;
+      scan_a_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_scan_a_topic, options.queue_size));
+      std::cout<<"Initialized Scan A publisher on topic "<<options.output_scan_a_topic<< " with queue size "<<options.queue_size<<std::endl;
     }
 
     if (options.pub_trans_scan_a) {
-      trans_scan_a_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_trans_scan_a_topic, 1000));
-      std::cout<<"Initialized Transformed Scan A publisher on topic "<<options.output_trans_scan_a_topic<<std::endl;
+      trans_scan_a_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_trans_scan_a_topic, options.queue_size));
+      std::cout<<"Initialized Transformed Scan A publisher on topic "<<options.output_trans_scan_a_topic<< " with queue size "<<options.queue_size<<std::endl;
     }
-    
+
     if (options.pub_scan_b) {
-      scan_b_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_scan_b_topic, 1000));
-      std::cout<<"Initialized Scan B publisher on topic "<<options.output_scan_b_topic<<std::endl;
+      scan_b_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_scan_b_topic, options.queue_size));
+      std::cout<<"Initialized Scan B publisher on topic "<<options.output_scan_b_topic<< " with queue size "<<options.queue_size<<std::endl;
     }
 
     if (options.show_each_step) {
-      step_scan_a_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_stepwise_a_topic, 1000));
-      std::cout<<"Initialized Stepwise Scan A publisher on topic "<<options.output_stepwise_a_topic<<std::endl;
+      step_scan_a_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_stepwise_a_topic, options.queue_size));
+      std::cout<<"Initialized Stepwise Scan A publisher on topic "<<options.output_stepwise_a_topic<< " with queue size "<<options.queue_size<<std::endl;
     }
 }
 
@@ -90,15 +90,15 @@ std::unique_ptr<ros::Subscriber> ScanMatchDriver::MakeSubscriber(const std::stri
 }
 
 void ScanMatchDriver::InitializeSubscribers(const ProgramOptions& options) {
-    scan_a_subscriber_ = MakeSubscriber(input_a_topic_, options.input_scan_a_type, 1000);
-    std::cout<<"Receiving input scan A of type "<< options.input_scan_a_type<<" on topic "<<options.input_scan_a_topic<<std::endl;
+    scan_a_subscriber_ = MakeSubscriber(input_a_topic_, options.input_scan_a_type, options.queue_size);
+    std::cout<<"Receiving input scan A of type "<< options.input_scan_a_type<<" on topic "<<options.input_scan_a_topic<< " with queue size "<<options.queue_size<<std::endl;
 
-    guess_subscriber_ = MakeSubscriber(options.initial_guess_topic, options.initial_guess_type, 1000);
-    std::cout<<"Receiving input initial guess of type "<< options.initial_guess_type<<" on topic "<<options.initial_guess_topic<<std::endl;
+    guess_subscriber_ = MakeSubscriber(options.initial_guess_topic, options.initial_guess_type, options.queue_size);
+    std::cout<<"Receiving input initial guess of type "<< options.initial_guess_type<<" on topic "<<options.initial_guess_topic<< " with queue size "<<options.queue_size<<std::endl;
 
     if (mode_ == MODE_A_TO_B) {
-    scan_b_subscriber_ = MakeSubscriber(input_b_topic_, options.input_scan_b_type, 1000);
-      std::cout<<"Receiving input scan B of type "<< options.input_scan_b_type<<" on topic "<<options.input_scan_b_topic<<std::endl;
+    scan_b_subscriber_ = MakeSubscriber(input_b_topic_, options.input_scan_b_type, options.queue_size);
+      std::cout<<"Receiving input scan B of type "<< options.input_scan_b_type<<" on topic "<<options.input_scan_b_topic<< " with queue size "<<options.queue_size<<std::endl;
     }
 }
 
@@ -144,7 +144,6 @@ void ScanMatchDriver::InitialGuessMatrixCallback(const std_msgs::Float64MultiArr
 
 void ScanMatchDriver::InitialGuessOdometryCallback(const nav_msgs::Odometry& initial_guess) {
   Eigen::Matrix4d new_odom = OdometryToMatrix(initial_guess);
-
   if (has_init_pose_) {
     Eigen::Matrix4d odom_delta_matrix = init_pose_* new_odom;
     icp_.SetInitialGuess(odom_delta_matrix);

@@ -44,6 +44,9 @@ struct ProgramOptions {
   std::string output_stepwise_a_topic{"scan_a_stepwise"};
   std::string output_trans_scan_a_topic{"scan_a_transformed_out"};
   std::string output_scan_b_topic{"scan_b_out"};
+
+  // Queue size
+  int queue_size{10};
 };
 
 ProgramOptions ParseArgs(int argc, char** argv) {
@@ -88,6 +91,8 @@ ProgramOptions ParseArgs(int argc, char** argv) {
     cxxopts::value<std::string>(program_options.output_trans_scan_a_topic)->default_value("scan_a_transformed_out"))
     ("out_b_topic", "Output topic to publish scan B",
     cxxopts::value<std::string>(program_options.output_scan_b_topic)->default_value("scan_b_out"))
+    ("q,queue_size", "queue_size",
+    cxxopts::value<int>(program_options.queue_size)->default_value(std::to_string(10)))
     ("h,help", "Print usage info");
 
   auto result = options.parse(argc, argv);
