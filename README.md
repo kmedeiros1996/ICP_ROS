@@ -8,3 +8,4 @@ Depending on the specified mode, this node can subscribe to two input pointcloud
 This library makes use of [Eigen3.3](https://gitlab.com/libeigen/eigen) and the [nanoflann header library](https://github.com/jlblancoc/nanoflann) in order to build a kdtree for efficient nearest neighbor lookup.
 
 Command line option parsing provided via [cxxopts](https://github.com/jarro2783/cxxopts)
+<img src="icp.gif">
