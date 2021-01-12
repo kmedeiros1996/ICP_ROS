@@ -9,6 +9,7 @@
 #include <sensor_msgs/LaserScan.h>
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
+#include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 
 // ICP
@@ -41,17 +42,19 @@ show_each_step_(options.show_each_step) {
 
 void ScanMatchDriver::InitializePublishers(const ProgramOptions& options) {
 
-    transform_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<std_msgs::Float64MultiArray>(options.output_transform_matrix_topic, 1000));
-    std::cout<<"Initialized Transformation Matrix publisher on topic "<<options.output_transform_matrix_topic<<std::endl;
+    transform_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<std_msgs::Float64MultiArray>(options.output_transform_topic, 1000));
+    std::cout<<"Initialized Transformation Matrix publisher on topic "<<options.output_transform_topic<<std::endl;
 
     if (options.pub_scan_a) {
       scan_a_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_scan_a_topic, 1000));
       std::cout<<"Initialized Scan A publisher on topic "<<options.output_scan_a_topic<<std::endl;
     }
+
     if (options.pub_trans_scan_a) {
       trans_scan_a_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_trans_scan_a_topic, 1000));
       std::cout<<"Initialized Transformed Scan A publisher on topic "<<options.output_trans_scan_a_topic<<std::endl;
     }
+    
     if (options.pub_scan_b) {
       scan_b_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_scan_b_topic, 1000));
       std::cout<<"Initialized Scan B publisher on topic "<<options.output_scan_b_topic<<std::endl;
@@ -76,8 +79,13 @@ std::unique_ptr<ros::Subscriber> ScanMatchDriver::MakeSubscriber(const std::stri
       boost::function<void(const sensor_msgs::PointCloud2ConstPtr&)> callback;
       callback = [this, topic](const sensor_msgs::PointCloud2ConstPtr& msg)-> void {this->PC2Callback(msg, topic);};
       return std::make_unique<ros::Subscriber>(node_handle_.subscribe(topic, rate, callback));
-    } else {
-      throw std::runtime_error("Invalid input scan message type!");
+    } else if(msg_type == "multiarray"){
+      return std::make_unique<ros::Subscriber>(node_handle_.subscribe(topic, rate, &ScanMatchDriver::InitialGuessMatrixCallback, this));
+    } else if(msg_type == "odometry"){
+      return std::make_unique<ros::Subscriber>(node_handle_.subscribe(topic, rate, &ScanMatchDriver::InitialGuessOdometryCallback, this));
+    }else {
+      std::string err_string = "Invalid input message type "+msg_type+"! ";
+      throw std::runtime_error(err_string);
     }
 }
 
@@ -85,7 +93,8 @@ void ScanMatchDriver::InitializeSubscribers(const ProgramOptions& options) {
     scan_a_subscriber_ = MakeSubscriber(input_a_topic_, options.input_scan_a_type, 1000);
     std::cout<<"Receiving input scan A of type "<< options.input_scan_a_type<<" on topic "<<options.input_scan_a_topic<<std::endl;
 
-    guess_subscriber_ = std::make_unique<ros::Subscriber>(node_handle_.subscribe( options.initial_guess_topic, 1000, &ScanMatchDriver::InitialGuessCallback, this));
+    guess_subscriber_ = MakeSubscriber(options.initial_guess_topic, options.initial_guess_type, 1000);
+    std::cout<<"Receiving input initial guess of type "<< options.initial_guess_type<<" on topic "<<options.initial_guess_topic<<std::endl;
 
     if (mode_ == MODE_A_TO_B) {
     scan_b_subscriber_ = MakeSubscriber(input_b_topic_, options.input_scan_b_type, 1000);
@@ -129,8 +138,19 @@ void ScanMatchDriver::PC2Callback(const sensor_msgs::PointCloud2ConstPtr& input_
   }
 }
 
-void ScanMatchDriver::InitialGuessCallback(const std_msgs::Float64MultiArray& initial_guess) {
+void ScanMatchDriver::InitialGuessMatrixCallback(const std_msgs::Float64MultiArray& initial_guess) {
   icp_.SetInitialGuess(MultiArrayToMatrix(initial_guess));
+}
+
+void ScanMatchDriver::InitialGuessOdometryCallback(const nav_msgs::Odometry& initial_guess) {
+  Eigen::Matrix4d new_odom = OdometryToMatrix(initial_guess);
+
+  if (has_init_pose_) {
+    Eigen::Matrix4d odom_delta_matrix = init_pose_* new_odom;
+    icp_.SetInitialGuess(odom_delta_matrix);
+  } else {
+    init_pose_ = new_odom.inverse();
+  }
 }
 
 void ScanMatchDriver::ProcessScanSequential(const Eigen::MatrixXd& pc_matrix) {

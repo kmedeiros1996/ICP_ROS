@@ -15,6 +15,7 @@
 #include <sensor_msgs/PointCloud.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <nav_msgs/Odometry.h>
 #include <ros/ros.h>
 
 // Third Party
@@ -80,11 +81,21 @@ private:
   void PC2Callback(const sensor_msgs::PointCloud2ConstPtr& input_cloud, const std::string &topic);
 
   /*
-  * @brief Initial Guess matrix callback.
+  * @brief Initial Guess Float64MultiArray callback.
   * Sets ICP initial guess to the matrix received on the initial_guess_topic.
   * @param initial_guess 4D transformation matrix encoding initial transform for Scan A
   */
-  void InitialGuessCallback(const std_msgs::Float64MultiArray& initial_guess);
+  void InitialGuessMatrixCallback(const std_msgs::Float64MultiArray& initial_guess);
+
+  /*
+  * @brief Initial Guess nav_msgs::Odometry callback.
+  * If this is the first odom message, sets a reference inverse pose matrix
+  * which all subsequent odom matrices are transformed with respect to
+  * in order to obtain an initial guess transform.
+  * Sets ICP initial guess to the odometry message received on the initial_guess_topic.
+  * @param initial_guess odometry message with initial guess transform info for scan A
+  */
+  void InitialGuessOdometryCallback(const nav_msgs::Odometry& initial_guess);
 
   /*
   * @brief Process an input scan received on the scan_a input topic.
@@ -148,6 +159,8 @@ private:
   std::string input_a_topic_;                                       // Topic to receive Scan A on (used in sequential and A-to-B mode)
   std::string input_b_topic_;                                       // Topic to receive Scan B on (A-to-B mode only)
   bool show_each_step_;                                             // Flag to run ICP in show_each_step mode
+  Eigen::Matrix4d init_pose_{Eigen::Matrix4d::Identity()};          // 4D transformation matrix representing initial odom pose
+  bool has_init_pose_{false};
   std::unique_ptr<ros::Duration> stepwise_time_interval_;           // Pointer to ros::Duration time interval to wait in between iterations (in stepwise scan mode)
   std::unique_ptr<ros::Publisher> transform_publisher_{nullptr};    // Pointer to transformation matrix publisher
   std::unique_ptr<ros::Publisher> scan_a_publisher_{nullptr};       // Pointer to scan a publisher
@@ -156,7 +169,7 @@ private:
   std::unique_ptr<ros::Publisher> scan_b_publisher_{nullptr};       // Pointer to scan b publisher
   std::unique_ptr<ros::Subscriber> scan_a_subscriber_{nullptr};     // Pointer to scan a subscriber
   std::unique_ptr<ros::Subscriber> scan_b_subscriber_{nullptr};     // Pointer to scan b subscriber
-  std::unique_ptr<ros::Subscriber> guess_subscriber_{nullptr};     // Pointer to initial guess subscriber
+  std::unique_ptr<ros::Subscriber> guess_subscriber_{nullptr};      // Pointer to initial guess subscriber
 };
 
 #endif //ICP_DRIVER_H

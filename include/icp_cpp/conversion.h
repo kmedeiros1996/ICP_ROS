@@ -6,6 +6,7 @@
 #include <sensor_msgs/PointCloud2.h>
 #include <sensor_msgs/LaserScan.h>
 #include <std_msgs/Float64MultiArray.h>
+#include <nav_msgs/Odometry.h>
 
 // Third Party
 #include <Eigen/Dense>
@@ -47,6 +48,12 @@ Eigen::MatrixXd PointCloud2ToMatrix(const sensor_msgs::PointCloud2ConstPtr& inpu
 */
 Eigen::MatrixXd MultiArrayToMatrix(const std_msgs::Float64MultiArray& matrix);
 
+/*
+* @brief turns a nav_msgs::Odometry into an Eigen::MatrixXd of size(4, 4) representing a transformation matrix
+* @param odometry odometry message
+*/
+Eigen::MatrixXd OdometryToMatrix(const nav_msgs::Odometry& odom);
+
 /*----------------------Output Conversions------------------------*/
 
 /*
@@ -61,6 +68,12 @@ sensor_msgs::PointCloud2 MatrixToPointCloud2(const Eigen::MatrixXd& pc_matrix, s
 * @brief turns an Eigen::MatrixXd into a Float64MultiArray of matching dimensions.
 * @param matrix dynamic size matrix of doubles
 */
-std_msgs::Float64MultiArray MatrixToMultiArray(const Eigen::MatrixXd& matrix);
+std_msgs::Float64MultiArray MatrixToMultiArray(const Eigen::Matrix4d& matrix);
+
+/*
+* @brief turns a nav_msgs::Odometry into an Eigen::Matrix4d representing a transformation matrix
+* @param odometry odometry message
+*/
+nav_msgs::Odometry MatrixToOdometry(const Eigen::Matrix4d& matrix);
 
 #endif //ICP_CONVERSION_H
