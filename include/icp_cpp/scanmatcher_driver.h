@@ -158,10 +158,6 @@ private:
 
   EScanMatchMode mode_{MODE_SEQUENTIAL};                            // Driver mode enum, either Sequential or A-To-B
   bool has_both_scans_{false};                                      // Flag for if both scans are available to run ICP on
-  Eigen::MatrixXd scan_a_;                                          // Scan A
-  Eigen::MatrixXd transformed_scan_a_;                              // Scan A, post-transform
-  Eigen::MatrixXd scan_b_;                                          // Scan B
-
   ICP icp_;                                                         // Scan Matcher class
   std::string frame_id_{"null"};                                    // TF frame id
   ros::NodeHandle node_handle_;                                     // ROS node handle

@@ -158,10 +158,10 @@ void ScanMatchDriver::InitialGuessOdometryCallback(const nav_msgs::Odometry& ini
 }
 
 void ScanMatchDriver::ProcessScanSequential(const Eigen::MatrixXd& pc_matrix) {
-  scan_a_ = pc_matrix;
+  icp_.SetScanA(pc_matrix);
 
   if (scan_a_publisher_ != nullptr) {
-    scan_a_publisher_->publish(MatrixToPointCloud2(scan_a_, frame_id_));
+    scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetInputScanA(), frame_id_));
   }
 
   if (has_both_scans_) {
@@ -170,21 +170,21 @@ void ScanMatchDriver::ProcessScanSequential(const Eigen::MatrixXd& pc_matrix) {
     } else {
       RunICPRegularMode();
     }
-
+    ProcessScanB(icp_.GetTransformedScanA());
   } else {
     std::cout<<"Sequential Scan Match: initializing first scan..."<<std::endl;
-    ProcessScanB(scan_a_);
+    ProcessScanB(pc_matrix);
   }
 }
 
 void ScanMatchDriver::ProcessScanA(const Eigen::MatrixXd& pc_matrix) {
-  scan_a_ = pc_matrix;
-
-  if (scan_a_publisher_ != nullptr) {
-    scan_a_publisher_->publish(MatrixToPointCloud2(scan_a_, frame_id_));
-  }
   icp_.SetScanA(pc_matrix);
-
+  if (scan_a_publisher_ != nullptr) {
+    scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetInputScanA(), frame_id_));
+  }
+  if (step_scan_a_publisher_ != nullptr) {
+    step_scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetTransformedScanA(), frame_id_));
+  }
   if (has_both_scans_) {
     if (show_each_step_) {
       RunICPStepwiseMode();
@@ -198,13 +198,12 @@ void ScanMatchDriver::ProcessScanA(const Eigen::MatrixXd& pc_matrix) {
 
 void ScanMatchDriver::ProcessScanB(const Eigen::MatrixXd& pc_matrix) {
   std::cout<<"Setting Scan B and building kd tree...";
-  scan_b_ = pc_matrix;
-  icp_.SetScanB(scan_b_);
+  icp_.SetScanB(pc_matrix);
   std::cout<<"Done!"<<std::endl;
   has_both_scans_ = true;
 
   if (scan_b_publisher_!= nullptr) {
-    scan_b_publisher_->publish(MatrixToPointCloud2(scan_b_, frame_id_));
+    scan_b_publisher_->publish(MatrixToPointCloud2(icp_.GetScanB(), frame_id_));
   }
 }
 
@@ -214,22 +213,24 @@ void ScanMatchDriver::RunICPRegularMode() {
   std::cout<<"Done!"<<std::endl;
 
   Eigen::Matrix4d transform = icp_.GetTransform();
-  std::cout<<"Transform found after "<<icp_.GetPrevIterations()<< " iterations: \n\n"<<transform<<std::endl;
-
-  transformed_scan_a_ = icp_.GetAlignedScan();
+  std::cout<<"Transform found after "<<icp_.GetPrevIterations()<< " iterations:"<<std::endl<<transform<<std::endl;
+  util::PrintTransform(transform);
 
   if (transform_publisher_ != nullptr) {
     transform_publisher_->publish(MatrixToMultiArray(transform));
   }
 
   if (trans_scan_a_publisher_ != nullptr) {
-    trans_scan_a_publisher_->publish(MatrixToPointCloud2(transformed_scan_a_, frame_id_));
+    trans_scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetTransformedScanA(), frame_id_));
   }
 }
 
 void ScanMatchDriver::RunICPStepwiseMode() {
   std::cout<<"Running scan match in stepwise mode."<<std::endl;
-  icp_.SetScanA(scan_a_);
+
+  if (scan_a_publisher_ != nullptr) {
+    scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetInputScanA(), frame_id_));
+  }
 
   double prev_error = 0.0;
   double mean_error = 0.0;
@@ -238,10 +239,9 @@ void ScanMatchDriver::RunICPStepwiseMode() {
 
   for (iters = 1; iters <= icp_.GetMaxIterations(); iters++) {
     mean_error = icp_.RunOneIteration();
-    transformed_scan_a_ = icp_.GetAlignedScan();
 
     if (step_scan_a_publisher_ != nullptr) {
-      step_scan_a_publisher_->publish(MatrixToPointCloud2(transformed_scan_a_, frame_id_));
+      step_scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetTransformedScanA(), frame_id_));
     }
 
     diff = fabs(mean_error - prev_error);
@@ -257,13 +257,14 @@ void ScanMatchDriver::RunICPStepwiseMode() {
   Eigen::Matrix4d transform = icp_.ComputeFinalTransform();
 
   std::cout<<"Done!"<<std::endl;
-  std::cout<<"Transform found after "<<iters<< " iterations: \n\n"<<transform<<std::endl;
+  std::cout<<"Transform found after "<<iters<< " iterations:"<<std::endl<<transform<<std::endl;
+  util::PrintTransform(transform);
 
   if (transform_publisher_ != nullptr) {
     transform_publisher_->publish(MatrixToMultiArray(transform));
   }
 
   if (trans_scan_a_publisher_ != nullptr) {
-    trans_scan_a_publisher_->publish(MatrixToPointCloud2(transformed_scan_a_, frame_id_));
+    trans_scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetTransformedScanA(), frame_id_));
   }
 }

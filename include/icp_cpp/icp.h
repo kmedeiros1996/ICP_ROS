@@ -30,7 +30,6 @@ public:
   ICP(int max_iterations, float tolerance=kLeastSquaresErrorTolerance);
 
   /*
-  * @brief Match an input scan A against the already built KD-Tree from Scan B.
   * @brief Match the input scan A against the already built KD-Tree from Scan B.
   * Assumes Scan A has already been set via a call to "SetScanA".
   * Stores the homogeneous transform between the original input and the post-alignment input in transform_matr_
@@ -39,13 +38,13 @@ public:
   void MatchScanAToScanB(double tolerance = kLeastSquaresErrorTolerance);
 
   /*
-  * @brief Set Scan A, populate the scan A homogeneous coordinates matrix, and transform via the initial guess.
+  * @brief Set Scan A, populate the scan A homogeneous coordinates matrix (dim+1, n_points), and transform via the initial guess.
   * @param scan_a (n_points * dim) matrix encoding pointcloud A xyz data
   */
   void SetScanA(const Eigen::MatrixXd &scan_a);
 
   /*
-  * @brief Set Scan B, populate the scan B homogeneous coordinates matrix,
+  * @brief Set Scan B, populate the scan B homogeneous coordinates matrix (dim+1, n_points),
   * and build a KD-Tree for Scan A to lookup nearest neighbors to.
   * @param scan_b (n_points * dim) matrix encoding pointcloud B xyz data
   */
@@ -61,7 +60,7 @@ public:
   double RunOneIteration();
 
   /*
-  * @brief Set initial guess of the transform between A and B.
+  * @brief Set initial guess of the transform which maps A and B.
   * @param initial_guess 4D matrix to set initial guess to.
   */
   void SetInitialGuess(const Eigen::Matrix4d &initial_guess) { initial_guess_ = initial_guess; }
@@ -94,7 +93,17 @@ public:
   /*
   * @brief get (n_points * dim) matrix containing aligned pointcloud xyz data
   */
-  Eigen::MatrixXd GetAlignedScan(){return curr_aligned_scan_a_;}
+  Eigen::MatrixXd GetTransformedScanA(){return curr_aligned_scan_a_.transpose();}
+
+  /*
+  * @brief get (n_points * dim) matrix containing initial input scan
+  */
+  Eigen::MatrixXd GetInputScanA() const {return input_scan_a_; }
+
+  /*
+  * @brief get (n_points * dim) matrix containing scan B
+  */
+  Eigen::MatrixXd GetScanB() const {return scan_b_; }
 
   /*
   * @return convergence tolerance for ICP
@@ -124,10 +133,11 @@ private:
   std::vector<double> dists_;                         // vector of distances to closest points
   int num_pts_a_;                                     // Number of points in Scan A
   int num_pts_b_;                                     // Number of points in Scan B
-  Eigen::MatrixXd input_scan_a_;                      // Input scan A
-  Eigen::MatrixXd curr_aligned_scan_a_;               // Input scan A with current transformation applied (n_points * dim)
-  Eigen::MatrixXd scan_a_hg_;                         // Input scan A in homogeneous coordinates (n_points * dim+1)
-  Eigen::MatrixXd scan_b_hg_;                         // Input scan B in homogeneous coordinates (n_points * dim+1)
+  Eigen::MatrixXd input_scan_a_;                      // Input scan A (n_points * dim)
+  Eigen::MatrixXd scan_b_;                            // Input scan B (n_points * dim)
+  Eigen::MatrixXd curr_aligned_scan_a_;               // Input scan A with current transformation applied (dim * n_points)
+  Eigen::MatrixXd scan_a_hg_;                         // Input scan A in homogeneous coordinates (dim+1 * n_points)
+  Eigen::MatrixXd scan_b_hg_;                         // Input scan B in homogeneous coordinates (dim+1 * n_points)
 };
 
 
