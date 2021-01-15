@@ -9,3 +9,4 @@ This library makes use of [Eigen3.3](https://gitlab.com/libeigen/eigen) and the 
 
 Command line option parsing provided via [cxxopts](https://github.com/jarro2783/cxxopts)
 <img src="icp.gif">
+<img src="icp_shapes.gif">
