@@ -134,3 +134,7 @@ Eigen::MatrixXd OdometryToMatrix(const nav_msgs::Odometry& odom) {
   out.block<3,3>(0,0) = q.toRotationMatrix();
   return out;
 }
+
+float Rad2Deg(const float rad) { return rad * 180.0 / M_PI; }
+
+float Deg2Rad(const float deg) { return deg * M_PI / 180.0; }
