@@ -126,14 +126,14 @@ include_directories(
   )
 
 ## Declare a C++ library
- add_library(icp
-   src/icp_utils.cpp
-   src/icp.cpp
- )
+add_library(icp
+  src/icp_utils.cpp
+  src/icp.cpp
+)
 
 add_library(scanmatcher_driver
-src/conversion.cpp
-src/scanmatcher_driver.cpp
+  src/conversion.cpp
+  src/scanmatcher_driver.cpp
 )
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries

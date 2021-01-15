@@ -11,9 +11,10 @@
 typedef nanoflann::KDTreeEigenMatrixAdaptor<Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>> NearestNeighborKDTree;
 
 namespace util {
-
+  
   /*
   * @brief compute the centroid of a pointcloud by taking the mean of all points
+  * @param pointcloud pointcloud of size (dim * n_pts)
   * @return centroid of the pointcloud
   */
   Eigen::Vector3d ComputeCentroid(const Eigen::MatrixXd& pointcloud);
@@ -26,6 +27,8 @@ namespace util {
 
   /*
   * @brief compute the 4d matrix encoding rotation + translation between two pointclouds
+  * @param scan_a pointcloud data matrix of size (dim * n_points)
+  * @param scan_b pointcloud data matrix of size (dim * n_points)
   * @return transform between pointcloud_a and pointcloud_b
   */
   Eigen::MatrixXd BestFitTransform(const Eigen::MatrixXd &scan_a, const Eigen::MatrixXd &scan_b);

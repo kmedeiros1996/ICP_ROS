@@ -234,9 +234,9 @@ void ScanMatchDriver::RunICPStepwiseMode() {
   double prev_error = 0.0;
   double mean_error = 0.0;
   double diff;
-  int iters = 0;
+  int iters;
 
-  for (iters = 0; iters <= icp_.GetMaxIterations(); iters++) {
+  for (iters = 1; iters <= icp_.GetMaxIterations(); iters++) {
     mean_error = icp_.RunOneIteration();
     transformed_scan_a_ = icp_.GetAlignedScan();
 
