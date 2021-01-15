@@ -183,6 +183,7 @@ void ScanMatchDriver::ProcessScanA(const Eigen::MatrixXd& pc_matrix) {
   if (scan_a_publisher_ != nullptr) {
     scan_a_publisher_->publish(MatrixToPointCloud2(scan_a_, frame_id_));
   }
+  icp_.SetScanA(pc_matrix);
 
   if (has_both_scans_) {
     if (show_each_step_) {
@@ -209,7 +210,7 @@ void ScanMatchDriver::ProcessScanB(const Eigen::MatrixXd& pc_matrix) {
 
 void ScanMatchDriver::RunICPRegularMode() {
   std::cout<<"Waiting for ICP to converge...";
-  icp_.MatchScanAToScanB(scan_a_);
+  icp_.MatchScanAToScanB();
   std::cout<<"Done!"<<std::endl;
 
   Eigen::Matrix4d transform = icp_.GetTransform();
