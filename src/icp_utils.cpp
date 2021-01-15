@@ -17,7 +17,7 @@ Eigen::Vector3d util::ComputeCentroid(const Eigen::MatrixXd& pointcloud) {
 }
 
 Eigen::MatrixXd util::ComputeRotationMatrix(Eigen::MatrixXd& shifted_pc_a, Eigen::MatrixXd& shifted_pc_b) {
-  Eigen::MatrixXd a_transpose_b = shifted_pc_b.transpose()*shifted_pc_a;
+  Eigen::MatrixXd a_transpose_b = shifted_pc_a.transpose() * shifted_pc_b;
   Eigen::MatrixXd rotation_matrix;
 
   Eigen::JacobiSVD<Eigen::MatrixXd> SVD(a_transpose_b, Eigen::ComputeFullU | Eigen::ComputeFullV);
@@ -32,8 +32,8 @@ Eigen::MatrixXd util::ComputeRotationMatrix(Eigen::MatrixXd& shifted_pc_a, Eigen
 
   // If the rotation matrix has zero determinant, we need to negate the sin/cos values
   if (rotation_matrix.determinant() < 0) {
-    v_transpose.block<1,3>(2,0) *=-1;
-    rotation_matrix = v_transpose*u_transpose;
+    V.block<1,3>(2,0) *=-1;
+    rotation_matrix = V*u_transpose;
   }
 
   return rotation_matrix;
