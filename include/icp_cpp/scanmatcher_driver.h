@@ -40,6 +40,53 @@ public:
   */
   ScanMatchDriver(const ProgramOptions& options);
 
+  /*
+  * @brief Process an input scan received on the scan_a input topic.
+  * Used only in sequential mode.
+  * - If first scan, sets Scan B to pc_matrix
+  * - Otherwise, Scan A is set to pc_matrixScan A and matched against Scan B
+  * - Post-alignment Scan A becomes Scan B
+  *
+  * @param pc_matrix (n_points * dim) matrix of pointcloud data
+  */
+  void ProcessScanSequential(const Eigen::MatrixXd& pc_matrix);
+
+  /*
+  * @brief Process an input scan received on the scan_a input topic.
+  * Used only in A to B mode.
+  * - Sets Scan A to pc_matrix
+  * - if Scan B is set, match Scan A against Scan B
+  *
+  * @param pc_matrix (n_points * dim) matrix of pointcloud data
+  */
+  void ProcessScanA(const Eigen::MatrixXd& pc_matrix);
+
+  /*
+  * @brief Process an input scan received on the scan_b input topic.
+  * Used only in A to B mode.
+  * Sets Scan B to pc_matrix and builds a KD Tree from the points.
+  *
+  * @param pc_matrix (n_points * dim) matrix of pointcloud data
+  */
+  void ProcessScanB(const Eigen::MatrixXd& pc_matrix);
+
+  /*
+  * @brief set the icp initial guess to a 4D transformation matrix.
+  */
+  void SetInitialGuess(const Eigen::Matrix4d& pose);
+  /*
+  * @brief Runs ICP in regular mode. After ICP converges, will publish the transform / transformed Scan A
+  */
+  void RunICPRegularMode();
+
+  /*
+  * @brief Runs ICP in stepwise mode.
+  * Publishes the current transformed scan on every iteration of ICP and waits for stepwise_time_interval_ seconds.
+  * After ICP converges, will publish the transform.
+  */
+  void RunICPStepwiseMode();
+
+
 private:
 
   /*
@@ -96,48 +143,6 @@ private:
   * @param initial_guess odometry message with initial guess transform info for scan A
   */
   void InitialGuessOdometryCallback(const nav_msgs::Odometry& initial_guess);
-
-  /*
-  * @brief Process an input scan received on the scan_a input topic.
-  * Used only in sequential mode.
-  * - If first scan, sets Scan B to pc_matrix
-  * - Otherwise, Scan A is set to pc_matrixScan A and matched against Scan B
-  * - Post-alignment Scan A becomes Scan B
-  *
-  * @param pc_matrix (n_points * dim) matrix of pointcloud data
-  */
-  void ProcessScanSequential(const Eigen::MatrixXd& pc_matrix);
-
-  /*
-  * @brief Process an input scan received on the scan_a input topic.
-  * Used only in A to B mode.
-  * - Sets Scan A to pc_matrix
-  * - if Scan B is set, match Scan A against Scan B
-  *
-  * @param pc_matrix (n_points * dim) matrix of pointcloud data
-  */
-  void ProcessScanA(const Eigen::MatrixXd& pc_matrix);
-
-  /*
-  * @brief Process an input scan received on the scan_b input topic.
-  * Used only in A to B mode.
-  * Sets Scan B to pc_matrix and builds a KD Tree from the points.
-  *
-  * @param pc_matrix (n_points * dim) matrix of pointcloud data
-  */
-  void ProcessScanB(const Eigen::MatrixXd& pc_matrix);
-
-  /*
-  * @brief Runs ICP in regular mode. After ICP converges, will publish the transform / transformed Scan A
-  */
-  void RunICPRegularMode();
-
-  /*
-  * @brief Runs ICP in stepwise mode.
-  * Publishes the current transformed scan on every iteration of ICP and waits for stepwise_time_interval_ seconds.
-  * After ICP converges, will publish the transform.
-  */
-  void RunICPStepwiseMode();
 
   /*
   * @brief method to create a pointer to a subscriber on the heap
