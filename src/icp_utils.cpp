@@ -70,3 +70,12 @@ Eigen::MatrixXd util::BestFitTransform(const Eigen::MatrixXd &scan_a, const Eige
 void util::PrintMatDims(const Eigen::MatrixXd& mat) {
   std::cout<<"("<<mat.rows()<<", "<<mat.cols()<<")"<<std::endl;
 }
+
+void util::PrintTransform(const Eigen::Matrix4d& transform) {
+  Eigen::Matrix3d rotation_matrix = transform.block<3,3>(0,0);
+  Eigen::Vector3d translation_vector = transform.block<3,1>(0,3);
+  Eigen::Vector3d euler = rotation_matrix.eulerAngles(0,1,2);
+
+  std::cout<<"XYZ: "<<translation_vector.transpose()<<std::endl
+  <<"RPY: "<<euler.transpose() * 180.0 / M_PI<<std::endl;
+}
