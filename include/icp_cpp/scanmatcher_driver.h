@@ -87,6 +87,10 @@ public:
   void RunICPStepwiseMode();
 
 
+  /*
+  * @brief get the pointer to ICP scan matcher object.
+  */
+  ICP *GetPtrToICP() { return &icp_; }
 private:
 
   /*
