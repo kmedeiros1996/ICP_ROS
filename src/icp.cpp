@@ -64,8 +64,7 @@ Eigen::Matrix4d ICP::ComputeFinalTransform() {
   return transform_matr_;
 }
 
-void ICP::MatchScanAToScanB(const Eigen::MatrixXd &scan_a, double tolerance) {
-  SetScanA(scan_a);
+void ICP::MatchScanAToScanB(double tolerance) {
   double prev_error = 0.0;
   double mean_error = 0.0;
   double diff;

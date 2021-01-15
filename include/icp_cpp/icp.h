@@ -31,12 +31,12 @@ public:
 
   /*
   * @brief Match an input scan A against the already built KD-Tree from Scan B.
+  * @brief Match the input scan A against the already built KD-Tree from Scan B.
+  * Assumes Scan A has already been set via a call to "SetScanA".
   * Stores the homogeneous transform between the original input and the post-alignment input in transform_matr_
-  * @param scan_a (n_points * dim) matrix encoding pointcloud A xyz data
   * @param tolerance error diff threshold to consider converged
   */
-  void MatchScanAToScanB(const Eigen::MatrixXd &scan_a, double tolerance = kLeastSquaresErrorTolerance);
-
+  void MatchScanAToScanB(double tolerance = kLeastSquaresErrorTolerance);
 
   /*
   * @brief Set Scan A, populate the scan A homogeneous coordinates matrix, and transform via the initial guess.
