@@ -27,7 +27,7 @@ input_a_topic_(options.input_scan_a_topic),
 input_b_topic_(options.input_scan_b_topic),
 show_each_step_(options.show_each_step) {
   mode_ = (options.mode == "sequential") ? MODE_SEQUENTIAL : MODE_A_TO_B;
-  std::cout<<"Starting ICP driver in "<<mode_<<" mode"<<std::endl;
+  std::cout<<"Starting ICP driver in "<<options.mode<<" mode"<<std::endl;
 
   if (show_each_step_) {
     std::cout<<"Running in debug SHOW_EACH_STEP mode. "<<std::endl;
@@ -35,9 +35,14 @@ show_each_step_(options.show_each_step) {
     stepwise_time_interval_ = std::make_unique<ros::Duration>(options.stepwise_time_interval);
   }
 
-  InitializeSubscribers(options);
-  InitializePublishers(options);
-  ros::spin();
+  if (options.enable_publishing) {
+    InitializePublishers(options);
+  }
+
+  if (options.enable_subscribing) {
+    InitializeSubscribers(options);
+    ros::spin();
+  }
 }
 
 void ScanMatchDriver::InitializePublishers(const ProgramOptions& options) {
