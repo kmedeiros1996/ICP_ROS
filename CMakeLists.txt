@@ -207,10 +207,11 @@ target_link_libraries(icp_node ${CATKIN_LIBRARIES} scanmatcher_driver)
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_icp_cpp.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
+
+  find_package(rostest REQUIRED)
+  add_rostest_gtest(icp_test_headless launch/icp_tests_headless.test test/icp_test.cpp)
+  add_rostest_gtest(icp_test launch/icp_tests_visualization.test test/icp_test.cpp)
+  target_link_libraries(icp_test ${catkin_LIBRARIES} icp scanmatcher_driver geometry)
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
