@@ -69,7 +69,7 @@ void ICP::MatchScanAToScanB(double tolerance) {
   double mean_error = 0.0;
   double diff;
 
-  for (iters_ = 0; iters_ <= max_iters_; iters_++) {
+  for (iters_ = 1; iters_ <= max_iters_; iters_++) {
     mean_error = RunOneIteration();
 
     diff = fabs(mean_error - prev_error);
