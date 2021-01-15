@@ -107,6 +107,11 @@ void ScanMatchDriver::InitializeSubscribers(const ProgramOptions& options) {
     }
 }
 
+void ScanMatchDriver::SetInitialGuess(const Eigen::Matrix4d& guess) {
+  icp_.SetInitialGuess(guess);
+  has_initial_guess_ = true;
+}
+
 void ScanMatchDriver::LaserScanCallback(const sensor_msgs::LaserScanConstPtr& input_scan, const std::string &topic) {
   if (topic == input_a_topic_) {
     if (mode_ == MODE_SEQUENTIAL) {
@@ -144,17 +149,15 @@ void ScanMatchDriver::PC2Callback(const sensor_msgs::PointCloud2ConstPtr& input_
 }
 
 void ScanMatchDriver::InitialGuessMatrixCallback(const std_msgs::Float64MultiArray& initial_guess) {
-  icp_.SetInitialGuess(MultiArrayToMatrix(initial_guess));
+  SetInitialGuess(MultiArrayToMatrix(initial_guess));
 }
 
-void ScanMatchDriver::InitialGuessOdometryCallback(const nav_msgs::Odometry& initial_guess) {
-  Eigen::Matrix4d new_odom = OdometryToMatrix(initial_guess);
-  if (has_init_pose_) {
-    Eigen::Matrix4d odom_delta_matrix = init_pose_* new_odom;
-    icp_.SetInitialGuess(odom_delta_matrix);
-  } else {
-    init_pose_ = new_odom.inverse();
-  }
+void ScanMatchDriver::InitialGuessOdometryCallback(const nav_msgs::Odometry& odom) {
+  Eigen::Matrix4d new_odom = OdometryToMatrix(odom);
+  Eigen::Matrix4d relative_odometry = prev_odom_pose_inv_* new_odom;
+
+  SetInitialGuess(relative_odometry);
+  prev_odom_pose_inv_ = new_odom.inverse();
 }
 
 void ScanMatchDriver::ProcessScanSequential(const Eigen::MatrixXd& pc_matrix) {
@@ -163,7 +166,10 @@ void ScanMatchDriver::ProcessScanSequential(const Eigen::MatrixXd& pc_matrix) {
   if (scan_a_publisher_ != nullptr) {
     scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetInputScanA(), frame_id_));
   }
-
+  if (!has_initial_guess_) {
+    std::cout<<"Waiting for initial guess..."<<std::endl;
+    return;
+  }
   if (has_both_scans_) {
     if (show_each_step_) {
       RunICPStepwiseMode();
@@ -185,6 +191,12 @@ void ScanMatchDriver::ProcessScanA(const Eigen::MatrixXd& pc_matrix) {
   if (step_scan_a_publisher_ != nullptr) {
     step_scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetTransformedScanA(), frame_id_));
   }
+
+  if (!has_initial_guess_) {
+    std::cout<<"Waiting for initial guess..."<<std::endl;
+    return;
+  }
+
   if (has_both_scans_) {
     if (show_each_step_) {
       RunICPStepwiseMode();
@@ -215,6 +227,9 @@ void ScanMatchDriver::RunICPRegularMode() {
   Eigen::Matrix4d transform = icp_.GetTransform();
   std::cout<<"Transform found after "<<icp_.GetPrevIterations()<< " iterations:"<<std::endl<<transform<<std::endl;
   util::PrintTransform(transform);
+
+  // Reset the initial guess flag so that a new transform can be provided (or absolute odom pose to compute a transform from)
+  has_initial_guess_ = false;
 
   if (transform_publisher_ != nullptr) {
     transform_publisher_->publish(MatrixToMultiArray(transform));
@@ -260,6 +275,9 @@ void ScanMatchDriver::RunICPStepwiseMode() {
   std::cout<<"Transform found after "<<iters<< " iterations:"<<std::endl<<transform<<std::endl;
   util::PrintTransform(transform);
 
+  // Reset the initial guess flag so that a new transform can be provided (or absolute odom pose to compute a transform from)
+  has_initial_guess_ = false;
+  
   if (transform_publisher_ != nullptr) {
     transform_publisher_->publish(MatrixToMultiArray(transform));
   }

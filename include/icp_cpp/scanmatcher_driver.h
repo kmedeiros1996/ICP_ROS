@@ -73,7 +73,8 @@ public:
   /*
   * @brief set the icp initial guess to a 4D transformation matrix.
   */
-  void SetInitialGuess(const Eigen::Matrix4d& pose);
+  void SetInitialGuess(const Eigen::Matrix4d& guess);
+
   /*
   * @brief Runs ICP in regular mode. After ICP converges, will publish the transform / transformed Scan A
   */
@@ -140,13 +141,14 @@ private:
 
   /*
   * @brief Initial Guess nav_msgs::Odometry callback.
-  * If this is the first odom message, sets a reference inverse pose matrix
-  * which all subsequent odom matrices are transformed with respect to
-  * in order to obtain an initial guess transform.
-  * Sets ICP initial guess to the odometry message received on the initial_guess_topic.
-  * @param initial_guess odometry message with initial guess transform info for scan A
+  * Assumes odometry is provided as an absolute pose instead of a relative transform
+  * and computes the relative transform between consecutive odometry messages
+  * to obtain an initial guess for the relative transform between scans.
+  * Sets ICP initial guess to the relative transform between the previous odom
+  * (initialized to an identity matrix) and odom
+  * @param odom odometry message containing absolute pose information to compute initial guess from
   */
-  void InitialGuessOdometryCallback(const nav_msgs::Odometry& initial_guess);
+  void InitialGuessOdometryCallback(const nav_msgs::Odometry& odom);
 
   /*
   * @brief method to create a pointer to a subscriber on the heap
@@ -164,8 +166,8 @@ private:
   std::string input_a_topic_;                                       // Topic to receive Scan A on (used in sequential and A-to-B mode)
   std::string input_b_topic_;                                       // Topic to receive Scan B on (A-to-B mode only)
   bool show_each_step_;                                             // Flag to run ICP in show_each_step mode
-  Eigen::Matrix4d init_pose_{Eigen::Matrix4d::Identity()};          // 4D transformation matrix representing initial odom pose
-  bool has_init_pose_{false};
+  Eigen::Matrix4d prev_odom_pose_inv_ {Eigen::Matrix4d::Identity()};// 4D transformation matrix representing prior odom pose
+  bool has_initial_guess_{false};                                   // Flag indicating ICP has set the initial guess
   std::unique_ptr<ros::Duration> stepwise_time_interval_;           // Pointer to ros::Duration time interval to wait in between iterations (in stepwise scan mode)
   std::unique_ptr<ros::Publisher> transform_publisher_{nullptr};    // Pointer to transformation matrix publisher
   std::unique_ptr<ros::Publisher> scan_a_publisher_{nullptr};       // Pointer to scan a publisher
