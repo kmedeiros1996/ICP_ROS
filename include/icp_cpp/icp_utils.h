@@ -34,6 +34,11 @@ namespace util {
   * @brief print out matrix dims in (row, col) format.
   */
   void PrintMatDims(const Eigen::MatrixXd& mat);
-}
+
+  /*
+  * @brief print the xyz/rpy encoded in a 4D transformation matrix.
+  */
+  void PrintTransform(const Eigen::Matrix4d& transform);
+} // namespace util
 
 #endif //ICP_UTILS_H
