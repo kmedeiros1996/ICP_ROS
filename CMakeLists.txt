@@ -135,6 +135,12 @@ add_library(scanmatcher_driver
   src/conversion.cpp
   src/scanmatcher_driver.cpp
 )
+add_library (geometry
+  src/utils/geometry.cpp
+)
+
+target_link_libraries (geometry ${catkin_LIBRARIES})
+
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure
@@ -162,10 +168,9 @@ add_executable (icp_node src/icp_node.cpp)
 #   ${catkin_LIBRARIES}
 # )
 
-
 target_link_libraries (icp ${catkin_LIBRARIES})
 target_link_libraries (scanmatcher_driver ${catkin_LIBRARIES} icp)
-target_link_libraries(icp_node ${CATKIN_LIBRARIES} scanmatcher_driver)
+target_link_libraries (icp_node ${CATKIN_LIBRARIES} scanmatcher_driver)
 
 #############+
 ## Install ##
@@ -211,7 +216,7 @@ target_link_libraries(icp_node ${CATKIN_LIBRARIES} scanmatcher_driver)
   find_package(rostest REQUIRED)
   add_rostest_gtest(icp_test_headless launch/icp_tests_headless.test test/icp_test.cpp)
   add_rostest_gtest(icp_test launch/icp_tests_visualization.test test/icp_test.cpp)
+  target_link_libraries(icp_test_headless ${catkin_LIBRARIES} icp scanmatcher_driver geometry)
   target_link_libraries(icp_test ${catkin_LIBRARIES} icp scanmatcher_driver geometry)
-
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
