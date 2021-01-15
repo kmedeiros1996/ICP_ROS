@@ -52,7 +52,7 @@ Eigen::MatrixXd MultiArrayToMatrix(const std_msgs::Float64MultiArray& matrix);
 * @brief turns a nav_msgs::Odometry into an Eigen::MatrixXd of size(4, 4) representing a transformation matrix
 * @param odometry odometry message
 */
-Eigen::MatrixXd OdometryToMatrix(const nav_msgs::Odometry& odom);
+Eigen::Matrix4d OdometryToMatrix(const nav_msgs::Odometry& odom);
 
 /*----------------------Output Conversions------------------------*/
 

@@ -118,8 +118,8 @@ Eigen::MatrixXd MultiArrayToMatrix(const std_msgs::Float64MultiArray& matrix) {
   return out;
 }
 
-Eigen::MatrixXd OdometryToMatrix(const nav_msgs::Odometry& odom) {
-  Eigen::MatrixXd out = Eigen::MatrixXd::Zero(4, 4);
+Eigen::Matrix4d OdometryToMatrix(const nav_msgs::Odometry& odom) {
+  Eigen::Matrix4d out = Eigen::MatrixXd::Identity(4, 4);
   double x = odom.pose.pose.position.x;
   double y = odom.pose.pose.position.y;
   double z = odom.pose.pose.position.z;
@@ -130,9 +130,26 @@ Eigen::MatrixXd OdometryToMatrix(const nav_msgs::Odometry& odom) {
   double qw = odom.pose.pose.orientation.w;
   Eigen::Quaterniond q (qw, qx, qy, qz);
 
-  out.block<3,1>(0,3) << x, y, z;
+  Eigen::Vector3d translation_vec(x, y, z);
+  out.block<3,1>(0,3) = translation_vec;
   out.block<3,3>(0,0) = q.toRotationMatrix();
   return out;
+}
+
+nav_msgs::Odometry MatrixToOdometry(const Eigen::Matrix4d& matrix) {
+  nav_msgs::Odometry odom;
+
+  odom.pose.pose.position.x = matrix(0,3);
+  odom.pose.pose.position.y = matrix(1,3);
+  odom.pose.pose.position.z = matrix(2,3);
+
+  Eigen::Quaterniond q (matrix.block<3,3>(0,0));
+
+  odom.pose.pose.orientation.w = q.w();
+  odom.pose.pose.orientation.x = q.x();
+  odom.pose.pose.orientation.y = q.y();
+  odom.pose.pose.orientation.z = q.z();
+  return odom;
 }
 
 float Rad2Deg(const float rad) { return rad * 180.0 / M_PI; }
