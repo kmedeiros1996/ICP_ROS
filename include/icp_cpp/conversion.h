@@ -76,4 +76,9 @@ std_msgs::Float64MultiArray MatrixToMultiArray(const Eigen::Matrix4d& matrix);
 */
 nav_msgs::Odometry MatrixToOdometry(const Eigen::Matrix4d& matrix);
 
+/*----------------------Misc Conversions------------------------*/
+float Rad2Deg(const float rad);
+float Deg2Rad(const float deg);
+
+
 #endif //ICP_CONVERSION_H
