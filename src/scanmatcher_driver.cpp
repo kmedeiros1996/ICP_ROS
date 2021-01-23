@@ -19,55 +19,52 @@
 #include "icp_cpp/scanmatcher_driver.h"
 
 ScanMatchDriver::ScanMatchDriver(const ProgramOptions& options)
-:frame_id_(options.frame_id),
+:options_(options),
 node_handle_(),
-icp_(options.max_num_iterations),
-has_both_scans_(false),
-input_a_topic_(options.input_scan_a_topic),
-input_b_topic_(options.input_scan_b_topic),
-show_each_step_(options.show_each_step) {
-  mode_ = (options.mode == "sequential") ? MODE_SEQUENTIAL : MODE_A_TO_B;
-  std::cout<<"Starting ICP driver in "<<options.mode<<" mode"<<std::endl;
+icp_(options_.max_num_iterations),
+has_both_scans_(false){
+  mode_ = (options_.mode == "sequential") ? MODE_SEQUENTIAL : MODE_A_TO_B;
+  std::cout<<"Starting ICP driver in "<<options_.mode<<" mode"<<std::endl;
 
   if (show_each_step_) {
     std::cout<<"Running in debug SHOW_EACH_STEP mode. "<<std::endl;
-    std::cout<<"Scans will be published after every iteration every "<<options.stepwise_time_interval<<"secs"<<std::endl;
-    stepwise_time_interval_ = std::make_unique<ros::Duration>(options.stepwise_time_interval);
+    std::cout<<"Scans will be published after every iteration every "<<options_.stepwise_time_interval<<"secs"<<std::endl;
+    stepwise_time_interval_ = std::make_unique<ros::Duration>(options_.stepwise_time_interval);
   }
 
-  if (options.enable_publishing) {
-    InitializePublishers(options);
+  if (options_.enable_publishing) {
+    InitializePublishers();
   }
 
-  if (options.enable_subscribing) {
-    InitializeSubscribers(options);
+  if (options_.enable_subscribing) {
+    InitializeSubscribers();
     ros::spin();
   }
 }
 
-void ScanMatchDriver::InitializePublishers(const ProgramOptions& options) {
+void ScanMatchDriver::InitializePublishers() {
 
-    transform_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<std_msgs::Float64MultiArray>(options.output_transform_topic, options.queue_size));
-    std::cout<<"Initialized Transformation Matrix publisher on topic "<<options.output_transform_topic<< " with queue size "<<options.queue_size<<std::endl;
+    publishers_[options_.output_transform_topic] = node_handle_.advertise<std_msgs::Float64MultiArray>(options_.output_transform_topic, options_.queue_size);
+    std::cout<<"Initialized Transformation Matrix publisher on topic "<<options_.output_transform_topic<< " with queue size "<<options_.queue_size<<std::endl;
 
-    if (options.pub_scan_a) {
-      scan_a_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_scan_a_topic, options.queue_size));
-      std::cout<<"Initialized Scan A publisher on topic "<<options.output_scan_a_topic<< " with queue size "<<options.queue_size<<std::endl;
+    if (options_.pub_scan_a) {
+      publishers_[options_.output_scan_a_topic] = node_handle_.advertise<sensor_msgs::PointCloud2>(options_.output_scan_a_topic, options_.queue_size);
+      std::cout<<"Initialized Scan A publisher on topic "<<options_.output_scan_a_topic<< " with queue size "<<options_.queue_size<<std::endl;
     }
 
-    if (options.pub_trans_scan_a) {
-      trans_scan_a_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_trans_scan_a_topic, options.queue_size));
-      std::cout<<"Initialized Transformed Scan A publisher on topic "<<options.output_trans_scan_a_topic<< " with queue size "<<options.queue_size<<std::endl;
+    if (options_.pub_trans_scan_a) {
+      publishers_[options_.output_trans_scan_a_topic] = node_handle_.advertise<sensor_msgs::PointCloud2>(options_.output_trans_scan_a_topic, options_.queue_size);
+      std::cout<<"Initialized Transformed Scan A publisher on topic "<<options_.output_trans_scan_a_topic<< " with queue size "<<options_.queue_size<<std::endl;
     }
 
-    if (options.pub_scan_b) {
-      scan_b_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_scan_b_topic, options.queue_size));
-      std::cout<<"Initialized Scan B publisher on topic "<<options.output_scan_b_topic<< " with queue size "<<options.queue_size<<std::endl;
+    if (options_.pub_scan_b) {
+      publishers_[options_.output_scan_b_topic] = node_handle_.advertise<sensor_msgs::PointCloud2>(options_.output_scan_b_topic, options_.queue_size);
+      std::cout<<"Initialized Scan B publisher on topic "<<options_.output_scan_b_topic<< " with queue size "<<options_.queue_size<<std::endl;
     }
 
-    if (options.show_each_step) {
-      step_scan_a_publisher_ = std::make_unique<ros::Publisher>(node_handle_.advertise<sensor_msgs::PointCloud2>(options.output_stepwise_a_topic, options.queue_size));
-      std::cout<<"Initialized Stepwise Scan A publisher on topic "<<options.output_stepwise_a_topic<< " with queue size "<<options.queue_size<<std::endl;
+    if (options_.show_each_step) {
+      publishers_[options_.output_stepwise_a_topic] = node_handle_.advertise<sensor_msgs::PointCloud2>(options_.output_stepwise_a_topic, options_.queue_size);
+      std::cout<<"Initialized Stepwise Scan A publisher on topic "<<options_.output_stepwise_a_topic<< " with queue size "<<options_.queue_size<<std::endl;
     }
 }
 
@@ -94,16 +91,16 @@ std::unique_ptr<ros::Subscriber> ScanMatchDriver::MakeSubscriber(const std::stri
     }
 }
 
-void ScanMatchDriver::InitializeSubscribers(const ProgramOptions& options) {
-    scan_a_subscriber_ = MakeSubscriber(input_a_topic_, options.input_scan_a_type, options.queue_size);
-    std::cout<<"Receiving input scan A of type "<< options.input_scan_a_type<<" on topic "<<options.input_scan_a_topic<< " with queue size "<<options.queue_size<<std::endl;
+void ScanMatchDriver::InitializeSubscribers() {
+    scan_a_subscriber_ = MakeSubscriber(options_.input_scan_a_topic, options_.input_scan_a_type, options_.queue_size);
+    std::cout<<"Receiving input scan A of type "<< options_.input_scan_a_type<<" on topic "<<options_.input_scan_a_topic<< " with queue size "<<options_.queue_size<<std::endl;
 
-    guess_subscriber_ = MakeSubscriber(options.initial_guess_topic, options.initial_guess_type, options.queue_size);
-    std::cout<<"Receiving input initial guess of type "<< options.initial_guess_type<<" on topic "<<options.initial_guess_topic<< " with queue size "<<options.queue_size<<std::endl;
+    guess_subscriber_ = MakeSubscriber(options_.initial_guess_topic, options_.initial_guess_type, options_.queue_size);
+    std::cout<<"Receiving input initial guess of type "<< options_.initial_guess_type<<" on topic "<<options_.initial_guess_topic<< " with queue size "<<options_.queue_size<<std::endl;
 
     if (mode_ == MODE_A_TO_B) {
-    scan_b_subscriber_ = MakeSubscriber(input_b_topic_, options.input_scan_b_type, options.queue_size);
-      std::cout<<"Receiving input scan B of type "<< options.input_scan_b_type<<" on topic "<<options.input_scan_b_topic<< " with queue size "<<options.queue_size<<std::endl;
+    scan_b_subscriber_ = MakeSubscriber(options_.input_scan_b_topic, options_.input_scan_b_type, options_.queue_size);
+      std::cout<<"Receiving input scan B of type "<< options_.input_scan_b_type<<" on topic "<<options_.input_scan_b_topic<< " with queue size "<<options_.queue_size<<std::endl;
     }
 }
 
@@ -113,37 +110,37 @@ void ScanMatchDriver::SetInitialGuess(const Eigen::Matrix4d& guess) {
 }
 
 void ScanMatchDriver::LaserScanCallback(const sensor_msgs::LaserScanConstPtr& input_scan, const std::string &topic) {
-  if (topic == input_a_topic_) {
+  if (topic == options_.input_scan_a_topic) {
     if (mode_ == MODE_SEQUENTIAL) {
       ProcessScanSequential(LaserScanToMatrix(input_scan));
     } else {
       ProcessScanA(LaserScanToMatrix(input_scan));
     }
-  } else if (topic == input_b_topic_) {
+  } else if (topic == options_.input_scan_b_topic) {
     ProcessScanB(LaserScanToMatrix(input_scan));
   }
 }
 
 void ScanMatchDriver::PointCloudCallback(const sensor_msgs::PointCloudConstPtr& input_cloud, const std::string &topic) {
-  if (topic == input_a_topic_) {
+  if (topic == options_.input_scan_a_topic) {
     if (mode_ == MODE_SEQUENTIAL) {
       ProcessScanSequential(PointCloudToMatrix(input_cloud));
     } else {
       ProcessScanA(PointCloudToMatrix(input_cloud));
     }
-  } else if (topic == input_b_topic_) {
+  } else if (topic == options_.input_scan_b_topic) {
     ProcessScanB(PointCloudToMatrix(input_cloud));
   }
 }
 
 void ScanMatchDriver::PC2Callback(const sensor_msgs::PointCloud2ConstPtr& input_cloud, const std::string &topic) {
-  if (topic == input_a_topic_) {
+  if (topic == options_.input_scan_a_topic) {
     if (mode_ == MODE_SEQUENTIAL) {
       ProcessScanSequential(PointCloud2ToMatrix(input_cloud));
     } else {
       ProcessScanA(PointCloud2ToMatrix(input_cloud));
     }
-  } else if (topic == input_b_topic_) {
+  } else if (topic == options_.input_scan_b_topic) {
     ProcessScanB(PointCloud2ToMatrix(input_cloud));
   }
 }
@@ -162,10 +159,8 @@ void ScanMatchDriver::InitialGuessOdometryCallback(const nav_msgs::Odometry& odo
 
 void ScanMatchDriver::ProcessScanSequential(const Eigen::MatrixXd& pc_matrix) {
   icp_.SetScanA(pc_matrix);
+  Publish(options_.output_scan_a_topic, MatrixToPointCloud2(icp_.GetInputScanA(), options_.frame_id));
 
-  if (scan_a_publisher_ != nullptr) {
-    scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetInputScanA(), frame_id_));
-  }
   if (!has_initial_guess_) {
     std::cout<<"Waiting for initial guess..."<<std::endl;
     return;
@@ -185,12 +180,8 @@ void ScanMatchDriver::ProcessScanSequential(const Eigen::MatrixXd& pc_matrix) {
 
 void ScanMatchDriver::ProcessScanA(const Eigen::MatrixXd& pc_matrix) {
   icp_.SetScanA(pc_matrix);
-  if (scan_a_publisher_ != nullptr) {
-    scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetInputScanA(), frame_id_));
-  }
-  if (step_scan_a_publisher_ != nullptr) {
-    step_scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetTransformedScanA(), frame_id_));
-  }
+  Publish(options_.output_scan_a_topic, MatrixToPointCloud2(icp_.GetInputScanA(), options_.frame_id));
+  Publish(options_.output_stepwise_a_topic, MatrixToPointCloud2(icp_.GetTransformedScanA(), options_.frame_id));
 
   if (!has_initial_guess_) {
     std::cout<<"Waiting for initial guess..."<<std::endl;
@@ -214,9 +205,7 @@ void ScanMatchDriver::ProcessScanB(const Eigen::MatrixXd& pc_matrix) {
   std::cout<<"Done!"<<std::endl;
   has_both_scans_ = true;
 
-  if (scan_b_publisher_!= nullptr) {
-    scan_b_publisher_->publish(MatrixToPointCloud2(icp_.GetScanB(), frame_id_));
-  }
+  Publish(options_.output_scan_b_topic, MatrixToPointCloud2(icp_.GetScanB(), options_.frame_id));
 }
 
 void ScanMatchDriver::RunICPRegularMode() {
@@ -231,21 +220,12 @@ void ScanMatchDriver::RunICPRegularMode() {
   // Reset the initial guess flag so that a new transform can be provided (or absolute odom pose to compute a transform from)
   has_initial_guess_ = false;
 
-  if (transform_publisher_ != nullptr) {
-    transform_publisher_->publish(MatrixToMultiArray(transform));
-  }
-
-  if (trans_scan_a_publisher_ != nullptr) {
-    trans_scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetTransformedScanA(), frame_id_));
-  }
+  Publish(options_.output_transform_topic, MatrixToMultiArray(transform));
+  Publish(options_.output_trans_scan_a_topic, MatrixToPointCloud2(icp_.GetTransformedScanA(), options_.frame_id));
 }
 
 void ScanMatchDriver::RunICPStepwiseMode() {
   std::cout<<"Running scan match in stepwise mode."<<std::endl;
-
-  if (scan_a_publisher_ != nullptr) {
-    scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetInputScanA(), frame_id_));
-  }
 
   double prev_error = 0.0;
   double mean_error = 0.0;
@@ -255,9 +235,7 @@ void ScanMatchDriver::RunICPStepwiseMode() {
   for (iters = 1; iters <= icp_.GetMaxIterations(); iters++) {
     mean_error = icp_.RunOneIteration();
 
-    if (step_scan_a_publisher_ != nullptr) {
-      step_scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetTransformedScanA(), frame_id_));
-    }
+    Publish(options_.output_stepwise_a_topic, MatrixToPointCloud2(icp_.GetTransformedScanA(), options_.frame_id));
 
     diff = fabs(mean_error - prev_error);
     if (diff < icp_.GetTolerance()) {
@@ -277,12 +255,14 @@ void ScanMatchDriver::RunICPStepwiseMode() {
 
   // Reset the initial guess flag so that a new transform can be provided (or absolute odom pose to compute a transform from)
   has_initial_guess_ = false;
-  
-  if (transform_publisher_ != nullptr) {
-    transform_publisher_->publish(MatrixToMultiArray(transform));
-  }
 
-  if (trans_scan_a_publisher_ != nullptr) {
-    trans_scan_a_publisher_->publish(MatrixToPointCloud2(icp_.GetTransformedScanA(), frame_id_));
+  Publish(options_.output_transform_topic, MatrixToMultiArray(transform));
+  Publish(options_.output_trans_scan_a_topic, MatrixToPointCloud2(icp_.GetTransformedScanA(), options_.frame_id));
+}
+
+template <typename T>
+void ScanMatchDriver::Publish(std::string topic_name, const T& msg) {
+  if (publishers_.find(topic_name) != publishers_.end()) {
+    publishers_[topic_name].publish(msg);
   }
 }

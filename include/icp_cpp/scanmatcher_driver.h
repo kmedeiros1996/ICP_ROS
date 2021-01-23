@@ -9,6 +9,7 @@
 //std
 #include <string>
 #include <memory>
+#include <unordered_map>
 
 //ROS
 #include <sensor_msgs/LaserScan.h>
@@ -76,6 +77,15 @@ public:
   void SetInitialGuess(const Eigen::Matrix4d& guess);
 
   /*
+  * Wrapper for publishers.
+  * If the topic passed in was defined during InitializePublishers(),
+  * will publish the provided message.
+  * Otherwise, no action is taken.
+  */
+  template <typename T>
+  void Publish(std::string topic_name, const T& msg);
+
+  /*
   * @brief Runs ICP in regular mode. After ICP converges, will publish the transform / transformed Scan A
   */
   void RunICPRegularMode();
@@ -87,26 +97,30 @@ public:
   */
   void RunICPStepwiseMode();
 
-
   /*
   * @brief get the pointer to ICP scan matcher object.
   */
   ICP *GetPtrToICP() { return &icp_; }
+
 private:
 
   /*
-  * @brief initialize ROS publishers on the heap according to program options.
-  * By default, will always initialize a publisher for the transformation matrix given by ICP
-  * @param options ProgramOptions struct used to determine which publishers to initialize
+  * @brief Initialize ROS publishers according to program options.
+  * Publishers are created as entries in a std::unordered_map
+  * and messages should be published through ScanMatchDriver::Publish()
+  * which checks for if a publisher with that topic name is present.
+  *
+  * By default, will always initialize a publisher for the transformation matrix given by ICP,
+  * and additional publishers are created based on program options.
   */
-  void InitializePublishers(const ProgramOptions& options);
+  void InitializePublishers();
 
   /*
   * @brief initialize ROS subscribers on the heap according to program options
   * Depending on mode, initializes one or two pointcloud subscribers with configurable message type (LaserScan, PointCloud, PointCloud2)
-  * @param options ProgramOptions struct used to determine which publishers to initialize
+  * and an initial guess subscriber.
   */
-  void InitializeSubscribers(const ProgramOptions& options);
+  void InitializeSubscribers();
 
   /*
   * @brief Callback for sensor_msgs::LaserScan.
@@ -158,22 +172,19 @@ private:
   */
   std::unique_ptr<ros::Subscriber> MakeSubscriber(const std::string& topic, const std::string& msg_type, int rate);
 
+
+  ProgramOptions options_;                                           // Options struct
   EScanMatchMode mode_{MODE_SEQUENTIAL};                            // Driver mode enum, either Sequential or A-To-B
   bool has_both_scans_{false};                                      // Flag for if both scans are available to run ICP on
   ICP icp_;                                                         // Scan Matcher class
-  std::string frame_id_{"null"};                                    // TF frame id
   ros::NodeHandle node_handle_;                                     // ROS node handle
-  std::string input_a_topic_;                                       // Topic to receive Scan A on (used in sequential and A-to-B mode)
-  std::string input_b_topic_;                                       // Topic to receive Scan B on (A-to-B mode only)
   bool show_each_step_;                                             // Flag to run ICP in show_each_step mode
   Eigen::Matrix4d prev_odom_pose_inv_ {Eigen::Matrix4d::Identity()};// 4D transformation matrix representing prior odom pose
   bool has_initial_guess_{false};                                   // Flag indicating ICP has set the initial guess
+
+  std::unordered_map<std::string, ros::Publisher> publishers_;       // Hashmap of publishers
+
   std::unique_ptr<ros::Duration> stepwise_time_interval_;           // Pointer to ros::Duration time interval to wait in between iterations (in stepwise scan mode)
-  std::unique_ptr<ros::Publisher> transform_publisher_{nullptr};    // Pointer to transformation matrix publisher
-  std::unique_ptr<ros::Publisher> scan_a_publisher_{nullptr};       // Pointer to scan a publisher
-  std::unique_ptr<ros::Publisher> step_scan_a_publisher_{nullptr};  // Pointer to stepwise scan a publisher
-  std::unique_ptr<ros::Publisher> trans_scan_a_publisher_{nullptr}; // Pointer to post-transform scan a publisher
-  std::unique_ptr<ros::Publisher> scan_b_publisher_{nullptr};       // Pointer to scan b publisher
   std::unique_ptr<ros::Subscriber> scan_a_subscriber_{nullptr};     // Pointer to scan a subscriber
   std::unique_ptr<ros::Subscriber> scan_b_subscriber_{nullptr};     // Pointer to scan b subscriber
   std::unique_ptr<ros::Subscriber> guess_subscriber_{nullptr};      // Pointer to initial guess subscriber
